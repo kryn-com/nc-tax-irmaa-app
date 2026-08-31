@@ -86,34 +86,9 @@ def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_b
     
     # 5. Federal Ordinary Brackets
     fed_ord_tax = 0.0
-    prev_limit = 0.0
-    ord_bracket_amts = []
     
-    for limit, rate in p["ord_brackets"]:
-        if fed_ord_taxable > prev_limit:
-            chunk = min(fed_ord_taxable, limit) - prev_limit
-            fed_ord_tax += chunk * rate
-            ord_bracket_amts.append({"rate": rate, "amount": chunk, "limit": limit})
-            prev_limit = limit
-        else:
-            break
-            
     # 6. Federal LTCG Brackets
-    start_stack = fed_ord_taxable
-    end_stack = fed_ord_taxable + fed_ltcg_taxable
     fed_ltcg_tax = 0.0
-    ltcg_bracket_amts = []
-    
-    ltcg_b = p["ltcg_brackets"]
-    t_0 = max(0.0, min(end_stack, ltcg_b[0][0]) - max(start_stack, 0.0))
-    t_15 = max(0.0, min(end_stack, ltcg_b[1][0]) - max(start_stack, ltcg_b[0][0]))
-    t_20 = max(0.0, end_stack - max(start_stack, ltcg_b[1][0]))
-    
-    if t_0 > 0: ltcg_bracket_amts.append({"rate": ltcg_b[0][1], "amount": t_0, "limit": ltcg_b[0][0]})
-    if t_15 > 0: ltcg_bracket_amts.append({"rate": ltcg_b[1][1], "amount": t_15, "limit": ltcg_b[1][0]})
-    if t_20 > 0: ltcg_bracket_amts.append({"rate": ltcg_b[2][1], "amount": t_20, "limit": ltcg_b[2][0]})
-    
-    fed_ltcg_tax = (t_0 * ltcg_b[0][1]) + (t_15 * ltcg_b[1][1]) + (t_20 * ltcg_b[2][1])
     
     # 7. Net Investment Income Tax
     niit_tax = 0.0
@@ -122,9 +97,28 @@ def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_b
         niit_subject = min(float(ltcg), magi - p["niit_threshold"])
         niit_tax = niit_subject * 0.038
         
+    # Calculate Ordinary Tax
+    prev_limit = 0.0
+    for limit, rate in p["ord_brackets"]:
+        if fed_ord_taxable > prev_limit:
+            chunk = min(fed_ord_taxable, limit) - prev_limit
+            fed_ord_tax += chunk * rate
+            prev_limit = limit
+        else:
+            break
+            
+    # Calculate LTCG Tax
+    start_stack = fed_ord_taxable
+    end_stack = fed_ord_taxable + fed_ltcg_taxable
+    ltcg_b = p["ltcg_brackets"]
+    t_0 = max(0.0, min(end_stack, ltcg_b[0][0]) - max(start_stack, 0.0))
+    t_15 = max(0.0, min(end_stack, ltcg_b[1][0]) - max(start_stack, ltcg_b[0][0]))
+    t_20 = max(0.0, end_stack - max(start_stack, ltcg_b[1][0]))
+    fed_ltcg_tax = (t_0 * ltcg_b[0][1]) + (t_15 * ltcg_b[1][1]) + (t_20 * ltcg_b[2][1])
+    
     total_fed_tax = fed_ord_tax + fed_ltcg_tax + niit_tax
     
-    # 8. NC State Tax (Includes custom user adjustment for state-exempt/addition instruments)
+    # 8. NC State Tax
     nc_taxable = max(0.0, wages + ltcg - pretax - nc_ded_base + nc_adj)
     nc_tax = nc_taxable * NC_TAX_RATE
     
@@ -156,9 +150,27 @@ def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_b
         "nc_tax": nc_tax,
         "annual_irmaa": annual_irmaa, "tier_name": tier_name, 
         "headroom_irmaa": headroom_irmaa, "depth_irmaa": depth_irmaa,
-        "total_outflows": total_outflows,
-        "ord_bracket_amts": ord_bracket_amts, "ltcg_bracket_amts": ltcg_bracket_amts
+        "total_outflows": total_outflows
     }
+
+def format_breakdown(base, new, is_up=True):
+    """Helper to generate the specific tax cost/savings breakdown string."""
+    sign = 1 if is_up else -1
+    dfed = sign * (new["fed_ord_tax"] + new["fed_ltcg_tax"] - base["fed_ord_tax"] - base["fed_ltcg_tax"])
+    dnc = sign * (new["nc_tax"] - base["nc_tax"])
+    dniit = sign * (new["niit_tax"] - base["niit_tax"])
+    dirmaa = sign * (new["annual_irmaa"] - base["annual_irmaa"])
+    dss = sign * (new["taxable_ss"] - base["taxable_ss"])
+    
+    parts = []
+    if dfed != 0: parts.append(f"Fed: ${dfed:,.0f}")
+    if dnc != 0: parts.append(f"NC: ${dnc:,.0f}")
+    if dniit != 0: parts.append(f"NIIT: ${dniit:,.0f}")
+    if dirmaa != 0: parts.append(f"Medicare: ${dirmaa:,.0f}")
+    if dss != 0: parts.append(f"SS Bump: +${dss:,.0f}")
+    
+    return " | ".join(parts) if parts else "No tax impact"
+
 
 # ---------------------------------------------------------
 # UI: SIDEBAR CONTROLS
@@ -214,81 +226,101 @@ st.title(f"Year-End Tax & Medicare Cliff Planner ({filing_status})")
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Federal Income Tax", f"${base['fed_ord_tax'] + base['fed_ltcg_tax']:,.0f}")
 kpi2.metric("NC State Tax", f"${base['nc_tax']:,.0f}")
-kpi3.metric("Projected 2028 Medicare Surcharge (IRMAA)", f"${base['annual_irmaa']:,.0f}/yr")
-kpi4.metric("Net Investment Income Tax (NIIT)", f"${base['niit_tax']:,.0f}")
+kpi3.metric("Net Investment Income Tax", f"${base['niit_tax']:,.0f}")
+kpi4.metric("Projected 2028 Medicare Surcharge", f"${base['annual_irmaa']:,.0f}/yr")
 
 st.divider()
 
 # ---------------------------------------------------------
-# 3-ROW STACKING CHART WITH PHANTOM OUTLINES
+# DYNAMIC 3-ROW MAGI STACKING CHART
 # ---------------------------------------------------------
 st.subheader("Income Stacking & Vulnerability Cliffs")
-st.caption("Maps exact dollar placement across three tiers: Deductions, Ordinary Tax, and Capital Gains.")
+st.caption("Maps exact dollar placement across absolute MAGI boundaries. Empty outlines indicate remaining room in your current marginal bracket.")
 
 blocks = []
-current_x = 0.0
 p = PARAMS[filing_status]
 
-# Row 1: Deductions
+# 1. Deductions Row (0 to used_ded)
 used_ded = min(base['fed_agi'], base['total_fed_deduction'])
 if used_ded > 0:
-    blocks.append({"Category": "Deductions", "Start": current_x, "End": current_x + used_ded, "Row": "1. Deductions", "Type": "Actual", "RateLabel": "Offset"})
+    blocks.append({"Category": "Deductions", "Start": 0, "End": used_ded, "Row": "1. Deductions", "Type": "Actual", "RateLabel": "0%"})
 
-# Row 2: Ordinary Income Base
-curr_ord_end = 0.0
-for b in base['ord_bracket_amts']:
-    blocks.append({"Category": f"Ordinary {int(b['rate']*100)}%", "Start": curr_ord_end, "End": curr_ord_end + b['amount'], "Row": "2. Ordinary Taxable", "Type": "Actual", "RateLabel": f"{int(b['rate']*100)}%"})
-    curr_ord_end += b['amount']
-
-# Row 2 Phantom
-next_ord_limit = None
-next_ord_rate = None
+# 2. Ordinary Taxable Row (Starts at used_ded)
+curr_magi = used_ded
+prev_limit = 0.0
 for limit, rate in p["ord_brackets"]:
-    if curr_ord_end < limit:
-        next_ord_limit = limit
-        next_ord_rate = rate
+    bracket_min = prev_limit
+    bracket_max = limit
+    
+    if base['fed_ord_taxable'] > bracket_min:
+        filled = min(base['fed_ord_taxable'], bracket_max) - bracket_min
+        blocks.append({"Category": f"Ord {int(rate*100)}%", "Start": curr_magi, "End": curr_magi + filled, "Row": "2. Ordinary Taxable", "Type": "Actual", "RateLabel": f"{int(rate*100)}%"})
+        curr_magi += filled
+        
+        # Draw phantom capacity only for the active marginal bucket
+        if base['fed_ord_taxable'] < bracket_max and bracket_max != float('inf'):
+            phantom = bracket_max - base['fed_ord_taxable']
+            blocks.append({"Category": f"Ord {int(rate*100)}%", "Start": curr_magi, "End": curr_magi + phantom, "Row": "2. Ordinary Taxable", "Type": "Phantom", "RateLabel": "Capacity"})
+            break
+    else:
         break
-if next_ord_limit and next_ord_limit != float('inf'):
-    blocks.append({"Category": f"Next Ord ({int(next_ord_rate*100)}%)", "Start": curr_ord_end, "End": next_ord_limit, "Row": "2. Ordinary Taxable", "Type": "Phantom", "RateLabel": "Capacity"})
+    prev_limit = limit
 
-# Row 3: Long-Term Capital Gains
-curr_ltcg_end = base['fed_ord_taxable']
-for b in base['ltcg_bracket_amts']:
-    blocks.append({"Category": f"LTCG {int(b['rate']*100)}%", "Start": curr_ltcg_end, "End": curr_ltcg_end + b['amount'], "Row": "3. LTCG Taxable", "Type": "Actual", "RateLabel": f"{int(b['rate']*100)}%"})
-    curr_ltcg_end += b['amount']
+# 3. LTCG Taxable Row (Starts where Ordinary ends)
+curr_magi = used_ded + base['fed_ord_taxable']
+total_taxable = base['fed_ord_taxable'] + base['fed_ltcg_taxable']
+prev_limit = 0.0
 
-# Row 3 Phantom
-next_ltcg_limit = None
-next_ltcg_rate = None
 for limit, rate in p["ltcg_brackets"]:
-    if curr_ltcg_end < limit:
-        next_ltcg_limit = limit
-        next_ltcg_rate = rate
+    if base['fed_ord_taxable'] >= limit:
+        prev_limit = limit
+        continue
+        
+    start_in_bracket = max(base['fed_ord_taxable'], prev_limit)
+    
+    if total_taxable > start_in_bracket:
+        filled = min(total_taxable, limit) - start_in_bracket
+        blocks.append({"Category": f"LTCG {int(rate*100)}%", "Start": curr_magi, "End": curr_magi + filled, "Row": "3. LTCG Taxable", "Type": "Actual", "RateLabel": f"{int(rate*100)}%"})
+        curr_magi += filled
+        
+        # Draw phantom capacity only for the active marginal LTCG bucket
+        if total_taxable < limit and limit != float('inf'):
+            phantom = limit - total_taxable
+            blocks.append({"Category": f"LTCG {int(rate*100)}%", "Start": curr_magi, "End": curr_magi + phantom, "Row": "3. LTCG Taxable", "Type": "Phantom", "RateLabel": "Capacity"})
+            break
+    else:
+        # Show first available bucket as phantom if no LTCG exists
+        if limit != float('inf'):
+            phantom = limit - start_in_bracket
+            blocks.append({"Category": f"LTCG {int(rate*100)}%", "Start": curr_magi, "End": curr_magi + phantom, "Row": "3. LTCG Taxable", "Type": "Phantom", "RateLabel": f"{int(rate*100)}% Cap."})
         break
-if next_ltcg_limit and next_ltcg_limit != float('inf'):
-    blocks.append({"Category": f"Next LTCG ({int(next_ltcg_rate*100)}%)", "Start": curr_ltcg_end, "End": next_ltcg_limit, "Row": "3. LTCG Taxable", "Type": "Phantom", "RateLabel": "Capacity"})
+    prev_limit = limit
 
-# Compute text overlay centers
 for b in blocks:
     b['Middle'] = (b['Start'] + b['End']) / 2
 
 df_blocks = pd.DataFrame(blocks)
 
-# Altair Chart Construction
+# Calculate dynamic X-axis maximum limit
+# Show up to Tier 3 threshold + a little padding, unless MAGI forces it wider
+tier_3_limit = p["irmaa_tiers"][2][0]
+x_max_val = max(base['magi'] * 1.05, tier_3_limit + 15000)
+
 base_chart = alt.Chart(df_blocks).encode(
     y=alt.Y("Row:N", title="", sort=["1. Deductions", "2. Ordinary Taxable", "3. LTCG Taxable"], axis=alt.Axis(labels=True, ticks=False, labelPadding=10, labelFontSize=12)),
-    x=alt.X("Start:Q", title="Modified Adjusted Gross Income (MAGI)", axis=alt.Axis(format="$,.0f")),
+    x=alt.X("Start:Q", title="Modified Adjusted Gross Income (MAGI)", scale=alt.Scale(domain=[0, x_max_val]), axis=alt.Axis(format="$,.0f")),
     x2=alt.X2("End:Q")
 )
 
-# Solid bars for actuals, transparent outlined bars for phantoms
 bar_actual = base_chart.transform_filter(alt.datum.Type == 'Actual').mark_bar(size=30, cornerRadius=2).encode(
     color=alt.Color("Category:N", scale=alt.Scale(scheme="tableau20"), legend=None),
     tooltip=["Category", alt.Tooltip("Start:Q", format="$,.0f"), alt.Tooltip("End:Q", format="$,.0f")]
 )
 
-bar_phantom = base_chart.transform_filter(alt.datum.Type == 'Phantom').mark_bar(size=30, opacity=0.15, stroke='black', strokeWidth=1, strokeDash=[2,2]).encode(
-    color=alt.value('gray'),
+# Phantom bars use light opacity and an identical color stroke to represent "empty space" in the bucket
+bar_phantom = base_chart.transform_filter(alt.datum.Type == 'Phantom').mark_bar(size=30, fillOpacity=0.1, strokeWidth=1.5, strokeDash=[4,4]).encode(
+    color=alt.Color("Category:N", scale=alt.Scale(scheme="tableau20"), legend=None),
+    stroke=alt.Color("Category:N", scale=alt.Scale(scheme="tableau20"), legend=None),
     tooltip=["Category", alt.Tooltip("Start:Q", format="$,.0f"), alt.Tooltip("End:Q", format="$,.0f")]
 )
 
@@ -298,10 +330,10 @@ text_labels = base_chart.mark_text(align='center', baseline='middle', color='whi
 )
 
 # Vertical rules for IRMAA/NIIT cliffs
-rules_data = [{"Name": "NIIT (3.8%)", "Value": PARAMS[filing_status]["niit_threshold"]}]
-for limit, _, name in PARAMS[filing_status]["irmaa_tiers"]:
+rules_data = [{"Name": "NIIT (3.8%)", "Value": p["niit_threshold"]}]
+for limit, _, name in p["irmaa_tiers"]:
     if limit != float('inf'):
-        rules_data.append({"Name": f"IRMAA {name.split()[1]}", "Value": limit})
+        rules_data.append({"Name": f"Medicare {name.split()[1]}", "Value": limit})
 
 rule_chart = alt.Chart(pd.DataFrame(rules_data)).mark_rule(strokeDash=[4,4], color='red', size=1.5).encode(
     x="Value:Q",
@@ -313,45 +345,51 @@ st.altair_chart((bar_actual + bar_phantom + text_labels + rule_chart).properties
 st.divider()
 
 # ---------------------------------------------------------
-# SLIVER ANALYSIS (Clean structural layout)
+# SLIVER ANALYSIS
 # ---------------------------------------------------------
-st.subheader("+$1,000 / -$1,000 Sliver Analysis")
+st.subheader("Sliver Analysis")
 col_add, col_sub = st.columns(2)
 
 with col_add:
     st.markdown("#### 📈 Realize +$1,000")
     st.metric(label="Add $1,000 Ordinary", value=f"Costs ${up_ord_cost:,.0f}", delta=f"{up_ord_cost/10.0:.1f}% effective rate", delta_color="inverse")
+    st.caption(f"_{format_breakdown(base, up_ord, True)}_")
+    
     st.metric(label="Add $1,000 LTCG", value=f"Costs ${up_ltcg_cost:,.0f}", delta=f"{up_ltcg_cost/10.0:.1f}% effective rate", delta_color="inverse")
+    st.caption(f"_{format_breakdown(base, up_ltcg, True)}_")
 
 with col_sub:
     st.markdown("#### 📉 Defer -$1,000")
     st.metric(label="Reduce $1,000 Ordinary", value=f"Saves ${dn_ord_save:,.0f}", delta=f"{dn_ord_save/10.0:.1f}% effective rate", delta_color="normal")
+    st.caption(f"_{format_breakdown(base, dn_ord, False)}_")
+    
     st.metric(label="Reduce $1,000 LTCG", value=f"Saves ${dn_ltcg_save:,.0f}", delta=f"{dn_ltcg_save/10.0:.1f}% effective rate", delta_color="normal")
+    st.caption(f"_{format_breakdown(base, dn_ltcg, False)}_")
 
 st.divider()
 
 # ---------------------------------------------------------
-# STATUS BOXES
+# STATUS BOXES (Markdown-Safe)
 # ---------------------------------------------------------
 alert1, alert2 = st.columns(2)
 with alert1:
-    st.markdown("### Projected 2028 IRMAA")
+    st.markdown("### Projected 2028 Medicare Surcharge")
     if base["annual_irmaa"] == 0:
-        st.success(f"**{base['tier_name']}**\n\nCurrent MAGI: **${base['magi']:,.0f}**. You are **${base['depth_irmaa']:,.0f}** deep into this tier, leaving **${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1.")
+        st.success(f"**{base['tier_name']}**\n\nCurrent MAGI is ${base['magi']:,.0f}. You are ${base['depth_irmaa']:,.0f} deep into this tier, leaving ${base['headroom_irmaa']:,.0f} in headroom before hitting Tier 1.")
     elif base["headroom_irmaa"] is not None:
-        st.warning(f"**{base['tier_name']}**\n\nAnnual Surcharge: **${base['annual_irmaa']:,.0f}**. You are **${base['depth_irmaa']:,.0f}** past the previous cliff, leaving **${base['headroom_irmaa']:,.0f}** in headroom before the next penalty jump.")
+        st.warning(f"**{base['tier_name']}**\n\nAnnual Surcharge is ${base['annual_irmaa']:,.0f}. You are ${base['depth_irmaa']:,.0f} past the previous cliff, leaving ${base['headroom_irmaa']:,.0f} in headroom before the next penalty jump.")
     else:
-        st.error(f"**{base['tier_name']}**\n\nMaximum bracket. Annual Surcharge: **${base['annual_irmaa']:,.0f}**. You are **${base['depth_irmaa']:,.0f}** over the final cliff threshold.")
+        st.error(f"**{base['tier_name']}**\n\nMaximum bracket. Annual Surcharge is ${base['annual_irmaa']:,.0f}. You are ${base['depth_irmaa']:,.0f} over the final cliff threshold.")
 
 with alert2:
     st.markdown("### Net Investment Income Tax")
-    nl = PARAMS[filing_status]["niit_threshold"]
+    nl = p["niit_threshold"]
     if base["magi"] > nl and ltcg_in > 0:
-        st.warning(f"**NIIT Active (3.8%)**\n\nMAGI of **${base['magi']:,.0f}** exceeds the limit. **${base['niit_subject']:,.0f}** of investment income is penalized.")
+        st.warning(f"**NIIT Active (3.8%)**\n\nMAGI of ${base['magi']:,.0f} exceeds the limit. ${base['niit_subject']:,.0f} of investment income is penalized.")
     elif base["magi"] > nl:
-        st.info(f"**NIIT Clear**\n\nMAGI exceeds the limit, but there is **$0** of investment income to penalize.")
+        st.info(f"**NIIT Clear**\n\nMAGI exceeds the limit, but there is $0 of investment income to penalize.")
     else:
-        st.success(f"**NIIT Exempt**\n\nMAGI is **${base['magi']:,.0f}**. You have **${(nl - base['magi']):,.0f}** in headroom before the penalty applies.")
+        st.success(f"**NIIT Exempt**\n\nMAGI is ${base['magi']:,.0f}. You have ${(nl - base['magi']):,.0f} in headroom before the penalty applies.")
 
 st.divider()
 
