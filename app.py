@@ -3,79 +3,142 @@ import pandas as pd
 import altair as alt
 
 st.set_page_config(
-    page_title="2026 Federal & NC Tax Planner",
+    page_title="Multi-Year Federal & NC Tax Planner",
     page_icon="📊",
     layout="wide"
 )
 
 # ---------------------------------------------------------
-# TAX CONSTANTS & ENGINE
+# MULTI-YEAR TAX CONSTANTS & ENGINE
 # ---------------------------------------------------------
 PARAMS = {
-    "Single": {
-        "fed_std_deduction": 16100.0,
-        "nc_std_deduction": 12750.0,
-        "age_65_bump": 2050.0,
-        "ss_thresh_1": 25000.0,
-        "ss_thresh_2": 34000.0,
-        "ord_brackets": [
-            (12400.0, 0.10),
-            (50400.0, 0.12),
-            (105700.0, 0.22),
-            (201775.0, 0.24),
-            (256125.0, 0.32),
-            (566350.0, 0.35),
-            (float("inf"), 0.37)
-        ],
-        "ltcg_brackets": [
-            (49450.0, 0.00),
-            (545500.0, 0.15),
-            (float("inf"), 0.20)
-        ],
-        "niit_threshold": 200000.0,
-        "oba_phaseout_start": 75000.0,
-        "irmaa_tiers": [
-            (114000.0, 0.0, "Tier 0 (Standard)"),
-            (143000.0, 97.50, "Tier 1 Surcharge"),
-            (179000.0, 240.40, "Tier 2 Surcharge"),
-            (float("inf"), 385.00, "Tier 3 Surcharge")
-        ]
+    2025: {
+        "nc_tax_rate": 0.0425,
+        "irmaa_year": 2027,
+        "Single": {
+            "fed_std_deduction": 15750.0,
+            "nc_std_deduction": 12750.0,
+            "age_65_bump": 2000.0,
+            "ss_thresh_1": 25000.0,
+            "ss_thresh_2": 34000.0,
+            "oba_max": 5800.0,
+            "oba_phaseout_start": 73000.0,
+            "ord_brackets": [(12050.0, 0.10), (49050.0, 0.12), (102800.0, 0.22), (196250.0, 0.24), (249150.0, 0.32), (550900.0, 0.35), (float("inf"), 0.37)],
+            "ltcg_brackets": [(48100.0, 0.00), (530650.0, 0.15), (float("inf"), 0.20)],
+            "niit_threshold": 200000.0,
+            "irmaa_tiers": [
+                (111000.0, 0.0, "Tier 0 (Standard)"),
+                (139000.0, 94.80, "Tier 1 Surcharge"),
+                (174000.0, 233.80, "Tier 2 Surcharge"),
+                (float("inf"), 374.50, "Tier 3 Surcharge")
+            ]
+        },
+        "MFJ": {
+            "fed_std_deduction": 31500.0,
+            "nc_std_deduction": 25500.0,
+            "age_65_bump": 1600.0,
+            "ss_thresh_1": 32000.0,
+            "ss_thresh_2": 44000.0,
+            "oba_max": 5800.0,
+            "oba_phaseout_start": 146000.0,
+            "ord_brackets": [(24100.0, 0.10), (98100.0, 0.12), (205600.0, 0.22), (392500.0, 0.24), (498300.0, 0.32), (712500.0, 0.35), (float("inf"), 0.37)],
+            "ltcg_brackets": [(96200.0, 0.00), (596900.0, 0.15), (float("inf"), 0.20)],
+            "niit_threshold": 250000.0,
+            "irmaa_tiers": [
+                (222000.0, 0.0, "Tier 0 (Standard)"),
+                (278000.0, 94.80 * 2, "Tier 1 Surcharge (2x)"),
+                (348000.0, 233.80 * 2, "Tier 2 Surcharge (2x)"),
+                (float("inf"), 374.50 * 2, "Tier 3 Surcharge (2x)")
+            ]
+        }
     },
-    "MFJ": {
-        "fed_std_deduction": 32200.0,
-        "nc_std_deduction": 25500.0,
-        "age_65_bump": 1650.0,
-        "ss_thresh_1": 32000.0,
-        "ss_thresh_2": 44000.0,
-        "ord_brackets": [
-            (24800.0, 0.10),
-            (100800.0, 0.12),
-            (211400.0, 0.22),
-            (403550.0, 0.24),
-            (512250.0, 0.32),
-            (732600.0, 0.35),
-            (float("inf"), 0.37)
-        ],
-        "ltcg_brackets": [
-            (98900.0, 0.00),
-            (613600.0, 0.15),
-            (float("inf"), 0.20)
-        ],
-        "niit_threshold": 250000.0,
-        "oba_phaseout_start": 150000.0,
-        "irmaa_tiers": [
-            (228000.0, 0.0, "Tier 0 (Standard)"),
-            (286000.0, 97.50 * 2, "Tier 1 Surcharge (2x)"),
-            (358000.0, 240.40 * 2, "Tier 2 Surcharge (2x)"),
-            (float("inf"), 385.00 * 2, "Tier 3 Surcharge (2x)")
-        ]
+    2026: {
+        "nc_tax_rate": 0.0399,
+        "irmaa_year": 2028,
+        "Single": {
+            "fed_std_deduction": 16100.0,
+            "nc_std_deduction": 12750.0,
+            "age_65_bump": 2050.0,
+            "ss_thresh_1": 25000.0,
+            "ss_thresh_2": 34000.0,
+            "oba_max": 6000.0,
+            "oba_phaseout_start": 75000.0,
+            "ord_brackets": [(12400.0, 0.10), (50400.0, 0.12), (105700.0, 0.22), (201775.0, 0.24), (256125.0, 0.32), (566350.0, 0.35), (float("inf"), 0.37)],
+            "ltcg_brackets": [(49450.0, 0.00), (545500.0, 0.15), (float("inf"), 0.20)],
+            "niit_threshold": 200000.0,
+            "irmaa_tiers": [
+                (114000.0, 0.0, "Tier 0 (Standard)"),
+                (143000.0, 97.50, "Tier 1 Surcharge"),
+                (179000.0, 240.40, "Tier 2 Surcharge"),
+                (float("inf"), 385.00, "Tier 3 Surcharge")
+            ]
+        },
+        "MFJ": {
+            "fed_std_deduction": 32200.0,
+            "nc_std_deduction": 25500.0,
+            "age_65_bump": 1650.0,
+            "ss_thresh_1": 32000.0,
+            "ss_thresh_2": 44000.0,
+            "oba_max": 6000.0,
+            "oba_phaseout_start": 150000.0,
+            "ord_brackets": [(24800.0, 0.10), (100800.0, 0.12), (211400.0, 0.22), (403550.0, 0.24), (512250.0, 0.32), (732600.0, 0.35), (float("inf"), 0.37)],
+            "ltcg_brackets": [(98900.0, 0.00), (613600.0, 0.15), (float("inf"), 0.20)],
+            "niit_threshold": 250000.0,
+            "irmaa_tiers": [
+                (228000.0, 0.0, "Tier 0 (Standard)"),
+                (286000.0, 97.50 * 2, "Tier 1 Surcharge (2x)"),
+                (358000.0, 240.40 * 2, "Tier 2 Surcharge (2x)"),
+                (float("inf"), 385.00 * 2, "Tier 3 Surcharge (2x)")
+            ]
+        }
+    },
+    2027: {
+        "nc_tax_rate": 0.0399,
+        "irmaa_year": 2029,
+        "Single": {
+            "fed_std_deduction": 16550.0,
+            "nc_std_deduction": 12750.0,
+            "age_65_bump": 2100.0,
+            "ss_thresh_1": 25000.0,
+            "ss_thresh_2": 34000.0,
+            "oba_max": 6150.0,
+            "oba_phaseout_start": 77100.0,
+            "ord_brackets": [(12750.0, 0.10), (51800.0, 0.12), (108650.0, 0.22), (207400.0, 0.24), (263300.0, 0.32), (582200.0, 0.35), (float("inf"), 0.37)],
+            "ltcg_brackets": [(50850.0, 0.00), (560750.0, 0.15), (float("inf"), 0.20)],
+            "niit_threshold": 200000.0,
+            "irmaa_tiers": [
+                (117200.0, 0.0, "Tier 0 (Standard)"),
+                (147000.0, 100.20, "Tier 1 Surcharge"),
+                (184000.0, 247.10, "Tier 2 Surcharge"),
+                (float("inf"), 395.70, "Tier 3 Surcharge")
+            ]
+        },
+        "MFJ": {
+            "fed_std_deduction": 33100.0,
+            "nc_std_deduction": 25500.0,
+            "age_65_bump": 1700.0,
+            "ss_thresh_1": 32000.0,
+            "ss_thresh_2": 44000.0,
+            "oba_max": 6150.0,
+            "oba_phaseout_start": 154200.0,
+            "ord_brackets": [(25500.0, 0.10), (103600.0, 0.12), (217300.0, 0.22), (414800.0, 0.24), (526600.0, 0.32), (753100.0, 0.35), (float("inf"), 0.37)],
+            "ltcg_brackets": [(101650.0, 0.00), (630750.0, 0.15), (float("inf"), 0.20)],
+            "niit_threshold": 250000.0,
+            "irmaa_tiers": [
+                (234400.0, 0.0, "Tier 0 (Standard)"),
+                (294000.0, 100.20 * 2, "Tier 1 Surcharge (2x)"),
+                (368000.0, 247.10 * 2, "Tier 2 Surcharge (2x)"),
+                (float("inf"), 395.70 * 2, "Tier 3 Surcharge (2x)")
+            ]
+        }
     }
 }
-NC_TAX_RATE = 0.0399
 
 
-def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_base, nc_adj, status, tp_65, sp_65):
-    p = PARAMS[status]
+def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_base, nc_adj, status, tp_65, sp_65):
+    yr_params = PARAMS[year]
+    p = yr_params[status]
+    nc_rate = yr_params["nc_tax_rate"]
     
     # 1. Social Security Taxability
     prov_income = wages + ltcg + muni - pretax + (0.50 * ss)
@@ -96,7 +159,7 @@ def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_b
     senior_bonus = 0.0
     if tp_65 or sp_65:
         count = sum([tp_65, sp_65]) if status == "MFJ" else (1 if tp_65 else 0)
-        max_ded = 6000.0 * count
+        max_ded = p["oba_max"] * count
         phase_out = max(0.0, (magi - p["oba_phaseout_start"]) * 0.06)
         senior_bonus = max(0.0, max_ded - phase_out)
         
@@ -154,7 +217,7 @@ def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_b
     
     # 8. NC State Tax
     nc_taxable = max(0.0, wages + ltcg - pretax - nc_ded_base + nc_adj)
-    nc_tax = nc_taxable * NC_TAX_RATE
+    nc_tax = nc_taxable * nc_rate
     
     # 9. Projected Medicare Surcharge
     tier_name = ""
@@ -198,7 +261,7 @@ def calculate_tax_scenario(wages, ltcg, ss, pretax, muni, fed_ded_base, nc_ded_b
 
 
 def format_breakdown(base_res, new_res):
-    """Generates a clear tax-delta breakdown with explicit +/- and $ signs."""
+    """Generates a clean tax-delta breakdown with explicit +/- and $ signs."""
     dfed = new_res["fed_ord_tax"] + new_res["fed_ltcg_tax"] - base_res["fed_ord_tax"] - base_res["fed_ltcg_tax"]
     dnc = new_res["nc_tax"] - base_res["nc_tax"]
     dniit = new_res["niit_tax"] - base_res["niit_tax"]
@@ -215,7 +278,7 @@ def format_breakdown(base_res, new_res):
     if dnc != 0: parts.append(f"NC: {fmt(dnc)}")
     if dniit != 0: parts.append(f"NIIT: {fmt(dniit)}")
     if dirmaa != 0: parts.append(f"Medicare: {fmt(dirmaa)}")
-    if dss != 0: parts.append(f"Taxable SS Delta: {fmt(dss)}")
+    if dss != 0: parts.append(f"Taxable SS: {fmt(dss)}")
     
     return "  •  ".join(parts) if parts else "No tax impact"
 
@@ -223,8 +286,9 @@ def format_breakdown(base_res, new_res):
 # ---------------------------------------------------------
 # UI: SIDEBAR CONTROLS
 # ---------------------------------------------------------
-st.sidebar.title("2026 Year-End Planner")
+st.sidebar.title("Year-End Tax Planner")
 
+tax_year = st.sidebar.selectbox("Tax Year", [2025, 2026, 2027], index=1, format_func=lambda x: f"{x} (Projected)" if x == 2027 else str(x))
 filing_status = st.sidebar.radio("Filing Status", ["Single", "MFJ"], horizontal=True)
 
 st.sidebar.subheader("Taxpayer Profile")
@@ -242,12 +306,14 @@ pretax_in = st.sidebar.number_input("Pre-Tax Deductions (401k) ($)", min_value=0
 muni_in = st.sidebar.number_input("Tax-Exempt Muni Interest ($)", min_value=0, max_value=150000, value=0, step=1000)
 
 st.sidebar.subheader("Deductions & State Adjustments")
+p_selected = PARAMS[tax_year][filing_status]
+
 fed_std_val = (
-    PARAMS[filing_status]["fed_std_deduction"]
-    + (PARAMS[filing_status]["age_65_bump"] if tp_65 else 0)
-    + (PARAMS[filing_status]["age_65_bump"] if sp_65 else 0)
+    p_selected["fed_std_deduction"]
+    + (p_selected["age_65_bump"] if tp_65 else 0)
+    + (p_selected["age_65_bump"] if sp_65 else 0)
 )
-nc_std_val = PARAMS[filing_status]["nc_std_deduction"]
+nc_std_val = p_selected["nc_std_deduction"]
 
 fed_ded_mode = st.sidebar.radio("Federal Deduction", ["Standard", "Itemized"], horizontal=True)
 fed_ded_val = (
@@ -273,28 +339,29 @@ nc_adj_in = st.sidebar.number_input(
 # ---------------------------------------------------------
 # CALCULATIONS
 # ---------------------------------------------------------
-base = calculate_tax_scenario(wages_in, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+base = calculate_tax_scenario(tax_year, wages_in, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
 
-up_ord = calculate_tax_scenario(wages_in + 1000, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-dn_ord = calculate_tax_scenario(max(0, wages_in - 1000), ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+up_ord = calculate_tax_scenario(tax_year, wages_in + 1000, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+dn_ord = calculate_tax_scenario(tax_year, max(0, wages_in - 1000), ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
 up_ord_cost = up_ord["total_outflows"] - base["total_outflows"]
 dn_ord_save = base["total_outflows"] - dn_ord["total_outflows"]
 
-up_ltcg = calculate_tax_scenario(wages_in, ltcg_in + 1000, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-dn_ltcg = calculate_tax_scenario(wages_in, max(0, ltcg_in - 1000), ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+up_ltcg = calculate_tax_scenario(tax_year, wages_in, ltcg_in + 1000, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+dn_ltcg = calculate_tax_scenario(tax_year, wages_in, max(0, ltcg_in - 1000), ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
 up_ltcg_cost = up_ltcg["total_outflows"] - base["total_outflows"]
 dn_ltcg_save = base["total_outflows"] - dn_ltcg["total_outflows"]
 
 # ---------------------------------------------------------
 # UI: DASHBOARD
 # ---------------------------------------------------------
-st.title(f"Year-End Tax & Medicare Cliff Planner ({filing_status})")
+header_year = f"{tax_year} (Projected)" if tax_year == 2027 else str(tax_year)
+st.title(f"{header_year} Year-End Tax & Medicare Cliff Planner ({filing_status})")
 
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Federal Income Tax", f"${base['fed_ord_tax'] + base['fed_ltcg_tax']:,.0f}")
-kpi2.metric("NC State Tax", f"${base['nc_tax']:,.0f}")
+kpi2.metric(f"NC State Tax ({PARAMS[tax_year]['nc_tax_rate']*100:.2f}%)", f"${base['nc_tax']:,.0f}")
 kpi3.metric("Net Investment Income Tax", f"${base['niit_tax']:,.0f}")
-kpi4.metric("Proj. 2028 Medicare Surcharge", f"${base['annual_irmaa']:,.0f}/yr")
+kpi4.metric(f"Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge", f"${base['annual_irmaa']:,.0f}/yr")
 
 st.divider()
 
@@ -304,7 +371,6 @@ st.divider()
 st.subheader("Income Stacking & Vulnerability Cliffs")
 st.caption("Visualizes dollar placement across absolute MAGI boundaries. Outlined segments represent remaining capacity in your current marginal bracket.")
 
-p = PARAMS[filing_status]
 blocks = []
 
 # Row 1: Deductions (0% band)
@@ -322,7 +388,7 @@ if used_ded > 0:
 # Row 2: Ordinary Income
 curr_ord_x = used_ded
 prev_limit = 0.0
-for limit, rate in p["ord_brackets"]:
+for limit, rate in p_selected["ord_brackets"]:
     if base["fed_ord_taxable"] > prev_limit:
         chunk = min(base["fed_ord_taxable"], limit) - prev_limit
         cat_name = f"Ord {int(rate*100)}%"
@@ -336,14 +402,13 @@ for limit, rate in p["ord_brackets"]:
         })
         curr_ord_x += chunk
         
-        # Marginal active bracket capacity
         if base["fed_ord_taxable"] < limit and limit != float("inf"):
             phantom_amt = limit - base["fed_ord_taxable"]
             blocks.append({
                 "Row": "Ordinary",
                 "Start": curr_ord_x,
                 "End": curr_ord_x + phantom_amt,
-                "Category": cat_name, # Match category for exact color
+                "Category": cat_name,
                 "Type": "Phantom",
                 "Label": "Capacity"
             })
@@ -357,7 +422,7 @@ curr_ltcg_x = used_ded + base["fed_ord_taxable"]
 total_taxable = base["fed_ord_taxable"] + base["fed_ltcg_taxable"]
 prev_limit = 0.0
 
-for limit, rate in p["ltcg_brackets"]:
+for limit, rate in p_selected["ltcg_brackets"]:
     if base["fed_ord_taxable"] >= limit:
         prev_limit = limit
         continue
@@ -409,11 +474,11 @@ if not df_blocks.empty:
 
 # Determine dynamic X-axis bounds (scale to just past the next unachieved cliff)
 next_cliff = None
-for limit, _, _ in p["irmaa_tiers"]:
+for limit, _, _ in p_selected["irmaa_tiers"]:
     if limit > base["magi"] and limit != float("inf"):
         next_cliff = limit
         break
-# If no IRMAA cliff found (already maxed), provide standard visual buffer
+
 if not next_cliff:
     next_cliff = base["magi"] * 1.05
     
@@ -426,9 +491,9 @@ df_actual = df_blocks[df_blocks["Type"] == "Actual"] if not df_blocks.empty else
 df_phantom = df_blocks[df_blocks["Type"] == "Phantom"] if not df_blocks.empty else pd.DataFrame()
 df_labels = df_blocks[df_blocks["Width"] >= 4000] if not df_blocks.empty else pd.DataFrame()
 
-chart_actual = alt.Chart(df_actual).mark_bar(size=28, cornerRadius=2).encode(
+chart_actual = alt.Chart(df_actual).mark_bar(size=30, cornerRadius=2).encode(
     x=alt.X("Start:Q", scale=x_scale, title="Modified Adjusted Gross Income (MAGI)", 
-            axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=14, grid=True)),
+            axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=15, grid=True)),
     x2=alt.X2("End:Q"),
     y=alt.Y("Row:N", scale=y_scale, title="", 
             axis=alt.Axis(labels=True, ticks=False, labelPadding=10, labelFontSize=15, labelFontWeight="bold")),
@@ -441,8 +506,7 @@ chart_actual = alt.Chart(df_actual).mark_bar(size=28, cornerRadius=2).encode(
     ]
 )
 
-# Phantom bars matching the actual bar color for immediate visual relation
-chart_phantom = alt.Chart(df_phantom).mark_bar(size=28, fillOpacity=0.12, strokeWidth=1.5, strokeDash=[4, 4]).encode(
+chart_phantom = alt.Chart(df_phantom).mark_bar(size=30, fillOpacity=0.12, strokeWidth=1.5, strokeDash=[4, 4]).encode(
     x=alt.X("Start:Q", scale=x_scale),
     x2=alt.X2("End:Q"),
     y=alt.Y("Row:N", scale=y_scale),
@@ -462,8 +526,8 @@ chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle",
     text=alt.Text("Label:N")
 )
 
-rules_data = [{"Name": "NIIT Threshold", "Value": p["niit_threshold"]}]
-for limit, _, name in p["irmaa_tiers"]:
+rules_data = [{"Name": "NIIT Threshold", "Value": p_selected["niit_threshold"]}]
+for limit, _, name in p_selected["irmaa_tiers"]:
     if limit != float("inf"):
         rules_data.append({"Name": f"Medicare {name.split()[1]}", "Value": limit})
 
@@ -480,25 +544,25 @@ st.divider()
 # SLIVER ANALYSIS
 # ---------------------------------------------------------
 st.subheader("Sliver Analysis")
-col_ord, col_ltcg = st.columns(2)
+col_ord_add, col_ord_sub, col_ltcg_add, col_ltcg_sub = st.columns(4)
 
-with col_ord:
+with col_ord_add:
     st.markdown("#### Ordinary Income")
     st.metric(label="Add +$1,000", value=f"Costs ${up_ord_cost:,.0f}", delta=f"{up_ord_cost/10.0:.1f}% effective rate", delta_color="inverse")
     st.write(format_breakdown(base, up_ord))
-    
-    st.markdown("---")
-    
+
+with col_ord_sub:
+    st.markdown("#### &nbsp;")
     st.metric(label="Reduce -$1,000", value=f"Saves ${dn_ord_save:,.0f}", delta=f"{dn_ord_save/10.0:.1f}% effective rate", delta_color="normal")
     st.write(format_breakdown(base, dn_ord))
 
-with col_ltcg:
-    st.markdown("#### Long-Term Capital Gains")
+with col_ltcg_add:
+    st.markdown("#### Capital Gains")
     st.metric(label="Add +$1,000", value=f"Costs ${up_ltcg_cost:,.0f}", delta=f"{up_ltcg_cost/10.0:.1f}% effective rate", delta_color="inverse")
     st.write(format_breakdown(base, up_ltcg))
-    
-    st.markdown("---")
-    
+
+with col_ltcg_sub:
+    st.markdown("#### &nbsp;")
     st.metric(label="Reduce -$1,000", value=f"Saves ${dn_ltcg_save:,.0f}", delta=f"{dn_ltcg_save/10.0:.1f}% effective rate", delta_color="normal")
     st.write(format_breakdown(base, dn_ltcg))
 
@@ -509,7 +573,7 @@ st.divider()
 # ---------------------------------------------------------
 alert1, alert2 = st.columns(2)
 with alert1:
-    st.markdown("### Projected 2028 Medicare Surcharge")
+    st.markdown(f"### Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge")
     if base["annual_irmaa"] == 0:
         st.success(
             f"**{base['tier_name']}**\n\n"
@@ -531,7 +595,7 @@ with alert1:
 
 with alert2:
     st.markdown("### Net Investment Income Tax")
-    nl = p["niit_threshold"]
+    nl = p_selected["niit_threshold"]
     if base["magi"] > nl and ltcg_in > 0:
         st.warning(
             f"**NIIT Active (3.8%)**\n\n"
@@ -564,23 +628,23 @@ test_range = range(0, 305000, 2500)
 
 if "Ordinary" in curve_axis:
     for w in test_range:
-        b_res = calculate_tax_scenario(w, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-        u_res = calculate_tax_scenario(w + 1000, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+        b_res = calculate_tax_scenario(tax_year, w, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+        u_res = calculate_tax_scenario(tax_year, w + 1000, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
         m_rate = ((u_res["total_outflows"] - b_res["total_outflows"]) / 1000.0) * 100.0
         curve_data.append({"Income": w, "Marginal Rate (%)": m_rate})
     current_val = wages_in
 else:
     for c in test_range:
-        b_res = calculate_tax_scenario(wages_in, c, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-        u_res = calculate_tax_scenario(wages_in, c + 1000, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+        b_res = calculate_tax_scenario(tax_year, wages_in, c, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
+        u_res = calculate_tax_scenario(tax_year, wages_in, c + 1000, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
         m_rate = ((u_res["total_outflows"] - b_res["total_outflows"]) / 1000.0) * 100.0
         curve_data.append({"Income": c, "Marginal Rate (%)": m_rate})
     current_val = ltcg_in
 
 df_curve = pd.DataFrame(curve_data)
 line_chart = alt.Chart(df_curve).mark_line(interpolate="step-after", strokeWidth=2.5, color="#1f77b4").encode(
-    x=alt.X("Income:Q", title="Income Axis ($)", axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=14)),
-    y=alt.Y("Marginal Rate (%):Q", scale=alt.Scale(domain=[0, max(60, df_curve["Marginal Rate (%)"].max())], clamp=True), axis=alt.Axis(labelFontSize=14, titleFontSize=14)),
+    x=alt.X("Income:Q", title="Income Axis ($)", axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=15)),
+    y=alt.Y("Marginal Rate (%):Q", scale=alt.Scale(domain=[0, max(60, df_curve["Marginal Rate (%)"].max())], clamp=True), axis=alt.Axis(labelFontSize=14, titleFontSize=15)),
     tooltip=[alt.Tooltip("Income:Q", title="Income Level", format="$,.0f"), alt.Tooltip("Marginal Rate (%):Q", title="Marginal Cost", format=".1f")]
 )
 
