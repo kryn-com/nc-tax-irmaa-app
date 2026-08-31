@@ -349,5 +349,3 @@ with col_details:
         ]
     })
     st.dataframe(summary_df, hide_index=True, use_container_width=True)
-
-```
