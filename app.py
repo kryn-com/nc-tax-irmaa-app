@@ -299,7 +299,7 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
 
 
 def format_breakdown(base_res, new_res):
-    """Generates a clean tax-delta breakdown with explicit +/- and $ signs."""
+    """Generates a clean tax-delta breakdown with explicit +/- and escaped $ signs."""
     dfed = new_res["fed_ord_tax"] + new_res["fed_ltcg_tax"] - base_res["fed_ord_tax"] - base_res["fed_ltcg_tax"]
     dnc = new_res["nc_tax"] - base_res["nc_tax"]
     dniit = new_res["niit_tax"] - base_res["niit_tax"]
@@ -309,7 +309,7 @@ def format_breakdown(base_res, new_res):
     def fmt(val):
         if val > 0: return f"+\\${val:,.0f}"
         elif val < 0: return f"-\\${abs(val):,.0f}"
-        return "\\$0"
+        return f"\\$0"
 
     parts = []
     if dfed != 0: parts.append(f"Fed: {fmt(dfed)}")
@@ -519,7 +519,7 @@ if not df_blocks.empty:
     df_blocks["Middle"] = (df_blocks["Start"] + df_blocks["End"]) / 2.0
     df_blocks["Width"] = df_blocks["End"] - df_blocks["Start"]
 
-# Determine dynamic X-axis bounds (scale to just past the next unachieved cliff)
+# Determine dynamic X-axis bounds
 next_cliff = None
 for limit, _, _ in p_selected["irmaa_tiers"]:
     if limit > base["magi"] and limit != float("inf"):
@@ -659,41 +659,3 @@ with alert2:
             f"**NIIT Exempt**\n\n"
             f"MAGI is **\\${base['magi']:,.0f}**. You have **\\${(nl - base['magi']):,.0f}** in headroom before the penalty applies."
         )
-
-st.divider()
-
-# ---------------------------------------------------------
-# MARGINAL TAX CURVE
-# ---------------------------------------------------------
-st.subheader("Interactive Marginal Tax Curve")
-st.caption("Plots the exact marginal tax cost to realize the next $1,000 of income across the spectrum.")
-
-curve_axis = st.radio("Select sweep variable:", ["Ordinary Income (tIRA, Wages)", "Long-Term Capital Gains"], horizontal=True)
-
-curve_data = []
-test_range = range(0, 305000, 2500)
-
-if "Ordinary" in curve_axis:
-    for w in test_range:
-        b_res = calculate_tax_scenario(tax_year, w, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-        u_res = calculate_tax_scenario(tax_year, w + 1000, ltcg_in, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-        m_rate = ((u_res["total_outflows"] - b_res["total_outflows"]) / 1000.0) * 100.0
-        curve_data.append({"Income": w, "Marginal Rate (%)": m_rate})
-    current_val = wages_in
-else:
-    for c in test_range:
-        b_res = calculate_tax_scenario(tax_year, wages_in, c, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-        u_res = calculate_tax_scenario(tax_year, wages_in, c + 1000, ss_in, pretax_in, muni_in, fed_ded_val, nc_ded_val, nc_adj_in, filing_status, tp_65, sp_65)
-        m_rate = ((u_res["total_outflows"] - b_res["total_outflows"]) / 1000.0) * 100.0
-        curve_data.append({"Income": c, "Marginal Rate (%)": m_rate})
-    current_val = ltcg_in
-
-df_curve = pd.DataFrame(curve_data)
-line_chart = alt.Chart(df_curve).mark_line(interpolate="step-after", strokeWidth=2.5, color="#1f77b4").encode(
-    x=alt.X("Income:Q", title="Income Axis ($)", axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=15)),
-    y=alt.Y("Marginal Rate (%):Q", scale=alt.Scale(domain=[0, max(60, df_curve["Marginal Rate (%)"].max())], clamp=True), axis=alt.Axis(labelFontSize=14, titleFontSize=15)),
-    tooltip=[alt.Tooltip("Income:Q", title="Income Level", format="$,.0f"), alt.Tooltip("Marginal Rate (%):Q", title="Marginal Cost", format=".1f")]
-)
-
-current_marker = alt.Chart(pd.DataFrame({"x": [current_val]})).mark_rule(color="#e63946", strokeDash=[4, 4], strokeWidth=2).encode(x="x:Q")
-st.altair_chart((line_chart + current_marker).properties(height=350), use_container_width=True)
