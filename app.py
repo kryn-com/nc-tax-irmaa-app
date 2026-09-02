@@ -275,6 +275,7 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     return {
         "fed_agi": fed_agi,
         "magi": magi,
+        "prov_income": prov_income,
         "taxable_ss": taxable_ss,
         "senior_bonus": senior_bonus,
         "total_fed_deduction": total_fed_deduction,
@@ -460,10 +461,10 @@ sub4.metric("Senior Bonus Deduction", f"${base['senior_bonus']:,.0f}")
 st.divider()
 
 # ---------------------------------------------------------
-# 4-ROW MAGI STACKING CHART (With Social Security Line)
+# 1. 3-ROW MAGI STACKING CHART
 # ---------------------------------------------------------
 st.subheader("Income Stacking & Vulnerability Cliffs")
-st.caption("Visualizes dollar placement across absolute MAGI boundaries. Outlined segments represent remaining capacity or sheltered amounts.")
+st.caption("Visualizes dollar placement across absolute MAGI boundaries. Outlined segments represent remaining capacity in your current marginal bracket.")
 
 blocks = []
 
@@ -471,7 +472,7 @@ blocks = []
 used_ded = min(base["fed_agi"], base["total_fed_deduction"])
 if used_ded > 0:
     blocks.append({
-        "Row": "1. Deductions",
+        "Row": "Deductions",
         "Start": 0.0,
         "End": used_ded,
         "Category": "Deductions (0%)",
@@ -479,30 +480,7 @@ if used_ded > 0:
         "Label": "0%"
     })
 
-# Row 2: Social Security (Taxable vs. Excluded Breakdown)
-if ss_in > 0:
-    if base["taxable_ss"] > 0:
-        blocks.append({
-            "Row": "2. Social Security",
-            "Start": 0.0,
-            "End": base["taxable_ss"],
-            "Category": "Taxable SS",
-            "Type": "Actual",
-            "Label": f"Taxable ({ss_pct}%)"
-        })
-    
-    excluded_ss = ss_in - base["taxable_ss"]
-    if excluded_ss > 0:
-        blocks.append({
-            "Row": "2. Social Security",
-            "Start": base["taxable_ss"],
-            "End": ss_in,
-            "Category": "Excluded SS",
-            "Type": "Phantom",
-            "Label": f"Tax-Free ({100 - ss_pct}%)"
-        })
-
-# Row 3: Ordinary Income (Starts where Deductions end)
+# Row 2: Ordinary Income
 curr_ord_x = used_ded
 prev_limit = 0.0
 for limit, rate in p_selected["ord_brackets"]:
@@ -510,7 +488,7 @@ for limit, rate in p_selected["ord_brackets"]:
         chunk = min(base["fed_ord_taxable"], limit) - prev_limit
         cat_name = f"Ord {int(rate*100)}%"
         blocks.append({
-            "Row": "3. Ordinary",
+            "Row": "Ordinary",
             "Start": curr_ord_x,
             "End": curr_ord_x + chunk,
             "Category": cat_name,
@@ -522,7 +500,7 @@ for limit, rate in p_selected["ord_brackets"]:
         if base["fed_ord_taxable"] < limit and limit != float("inf"):
             phantom_amt = limit - base["fed_ord_taxable"]
             blocks.append({
-                "Row": "3. Ordinary",
+                "Row": "Ordinary",
                 "Start": curr_ord_x,
                 "End": curr_ord_x + phantom_amt,
                 "Category": cat_name,
@@ -534,7 +512,7 @@ for limit, rate in p_selected["ord_brackets"]:
         break
     prev_limit = limit
 
-# Row 4: LTCG (Stacks on top of Ordinary Income)
+# Row 3: LTCG
 curr_ltcg_x = used_ded + base["fed_ord_taxable"]
 total_taxable = base["fed_ord_taxable"] + base["fed_ltcg_taxable"]
 prev_limit = 0.0
@@ -550,7 +528,7 @@ for limit, rate in p_selected["ltcg_brackets"]:
     if total_taxable > start_in_bracket:
         chunk = min(total_taxable, limit) - start_in_bracket
         blocks.append({
-            "Row": "4. LTCG",
+            "Row": "LTCG",
             "Start": curr_ltcg_x,
             "End": curr_ltcg_x + chunk,
             "Category": cat_name,
@@ -562,7 +540,7 @@ for limit, rate in p_selected["ltcg_brackets"]:
         if total_taxable < limit and limit != float("inf"):
             phantom_amt = limit - total_taxable
             blocks.append({
-                "Row": "4. LTCG",
+                "Row": "LTCG",
                 "Start": curr_ltcg_x,
                 "End": curr_ltcg_x + phantom_amt,
                 "Category": cat_name,
@@ -574,7 +552,7 @@ for limit, rate in p_selected["ltcg_brackets"]:
         if limit != float("inf"):
             phantom_amt = limit - start_in_bracket
             blocks.append({
-                "Row": "4. LTCG",
+                "Row": "LTCG",
                 "Start": curr_ltcg_x,
                 "End": curr_ltcg_x + phantom_amt,
                 "Category": cat_name,
@@ -602,13 +580,13 @@ if not next_cliff:
 x_axis_max = max(base["magi"] * 1.05, next_cliff + 15000)
 
 x_scale = alt.Scale(domain=[0, x_axis_max], clamp=True)
-y_scale = alt.Scale(domain=["1. Deductions", "2. Social Security", "3. Ordinary", "4. LTCG"])
+y_scale = alt.Scale(domain=["Deductions", "Ordinary", "LTCG"])
 
 df_actual = df_blocks[df_blocks["Type"] == "Actual"] if not df_blocks.empty else pd.DataFrame()
 df_phantom = df_blocks[df_blocks["Type"] == "Phantom"] if not df_blocks.empty else pd.DataFrame()
 df_labels = df_blocks[df_blocks["Width"] >= 4000] if not df_blocks.empty else pd.DataFrame()
 
-chart_actual = alt.Chart(df_actual).mark_bar(size=26, cornerRadius=2).encode(
+chart_actual = alt.Chart(df_actual).mark_bar(size=28, cornerRadius=2).encode(
     x=alt.X("Start:Q", scale=x_scale, title="Modified Adjusted Gross Income (MAGI)", 
             axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=15, grid=True)),
     x2=alt.X2("End:Q"),
@@ -623,14 +601,14 @@ chart_actual = alt.Chart(df_actual).mark_bar(size=26, cornerRadius=2).encode(
     ]
 )
 
-chart_phantom = alt.Chart(df_phantom).mark_bar(size=26, fillOpacity=0.12, strokeWidth=1.5, strokeDash=[4, 4]).encode(
+chart_phantom = alt.Chart(df_phantom).mark_bar(size=28, fillOpacity=0.12, strokeWidth=1.5, strokeDash=[4, 4]).encode(
     x=alt.X("Start:Q", scale=x_scale),
     x2=alt.X2("End:Q"),
     y=alt.Y("Row:N", scale=y_scale),
     color=alt.Color("Category:N", scale=alt.Scale(scheme="tableau10"), legend=None),
     stroke=alt.Color("Category:N", scale=alt.Scale(scheme="tableau10"), legend=None),
     tooltip=[
-        alt.Tooltip("Category:N", title="Available Capacity / Sheltered"),
+        alt.Tooltip("Category:N", title="Available Capacity"),
         alt.Tooltip("Start:Q", title="Current Position", format="$,.0f"),
         alt.Tooltip("End:Q", title="Bracket Cap", format="$,.0f"),
         alt.Tooltip("Width:Q", title="Remaining Room", format="$,.0f")
@@ -643,53 +621,127 @@ chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle",
     text=alt.Text("Label:N")
 )
 
-# Threshold lines: NIIT (Purple) and IRMAA (Red)
-rules_data = [{"Name": "NIIT", "Value": p_selected["niit_threshold"], "Color": "#8338ec", "Type": "NIIT"}]
+# Threshold rules: IRMAA (Red) and NIIT (Purple)
+rules_data = []
 tier_num = 1
 for limit, _, _ in p_selected["irmaa_tiers"]:
-    if limit != float("inf"):
+    if limit != float("inf") and limit <= x_axis_max:
         rules_data.append({"Name": f"IRMAA {tier_num}", "Value": limit, "Color": "#e63946", "Type": "IRMAA"})
         tier_num += 1
 
+if p_selected["niit_threshold"] <= x_axis_max:
+    rules_data.append({"Name": "NIIT", "Value": p_selected["niit_threshold"], "Color": "#8338ec", "Type": "NIIT"})
+
 df_rules = pd.DataFrame(rules_data)
 
-rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], strokeWidth=1.5).encode(
-    x=alt.X("Value:Q", scale=x_scale),
-    color=alt.Color("Color:N", scale=None),
-    tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="MAGI", format="$,.0f")]
-)
+if not df_rules.empty:
+    rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], strokeWidth=1.5).encode(
+        x=alt.X("Value:Q", scale=x_scale),
+        color=alt.Color("Color:N", scale=None),
+        tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="MAGI", format="$,.0f")]
+    )
 
-# Staggered header text labels to completely avoid collisions
-df_rules_irmaa = df_rules[df_rules["Type"] == "IRMAA"]
-df_rules_niit = df_rules[df_rules["Type"] == "NIIT"]
+    df_rules_irmaa = df_rules[df_rules["Type"] == "IRMAA"]
+    df_rules_niit = df_rules[df_rules["Type"] == "NIIT"]
 
-rule_text_irmaa = alt.Chart(df_rules_irmaa).mark_text(
-    align="center",
-    baseline="bottom",
-    dy=-8,
-    fontSize=12,
-    fontWeight="bold",
-    color="#e63946"
-).encode(
-    x=alt.X("Value:Q", scale=x_scale),
-    y=alt.value(0),
-    text=alt.Text("Name:N")
-)
+    rule_text_irmaa = alt.Chart(df_rules_irmaa).mark_text(
+        align="center",
+        baseline="bottom",
+        dy=-8,
+        fontSize=12,
+        fontWeight="bold",
+        color="#e63946"
+    ).encode(
+        x=alt.X("Value:Q", scale=x_scale),
+        y=alt.value(0),
+        text=alt.Text("Name:N")
+    )
 
-rule_text_niit = alt.Chart(df_rules_niit).mark_text(
-    align="center",
-    baseline="bottom",
-    dy=-24,
-    fontSize=12,
-    fontWeight="bold",
-    color="#8338ec"
-).encode(
-    x=alt.X("Value:Q", scale=x_scale),
-    y=alt.value(0),
-    text=alt.Text("Name:N")
-)
+    rule_text_niit = alt.Chart(df_rules_niit).mark_text(
+        align="center",
+        baseline="bottom",
+        dy=-24,
+        fontSize=12,
+        fontWeight="bold",
+        color="#8338ec"
+    ).encode(
+        x=alt.X("Value:Q", scale=x_scale),
+        y=alt.value(0),
+        text=alt.Text("Name:N")
+    )
+    
+    st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart + rule_text_irmaa + rule_text_niit).properties(height=240), use_container_width=True)
+else:
+    st.altair_chart((chart_actual + chart_phantom + chart_labels).properties(height=240), use_container_width=True)
 
-st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart + rule_text_irmaa + rule_text_niit).properties(height=280), use_container_width=True)
+# ---------------------------------------------------------
+# 2. SOCIAL SECURITY TORPEDO GAUGE (Option C)
+# ---------------------------------------------------------
+if ss_in > 0:
+    st.markdown("#### Social Security Taxability & Torpedo Phase-In")
+    
+    t1 = p_selected["ss_thresh_1"]
+    t2 = p_selected["ss_thresh_2"]
+    prov_inc = base["prov_income"]
+    
+    # Identify drag multiplier
+    if prov_inc <= t1:
+        drag_desc = "0% Drag (\\$0 taxable SS added per \\$1.00 income)"
+    elif prov_inc <= t2:
+        drag_desc = "50% Phase-In (+50¢ taxable SS added per \\$1.00 income)"
+    elif base["taxable_ss"] < (0.85 * ss_in):
+        drag_desc = "85% Phase-In (+85¢ taxable SS added per \\$1.00 income — Active Torpedo Zone)"
+    else:
+        drag_desc = "85% Cap Reached (\\$0 taxable SS added per \\$1.00 income)"
+        
+    st.caption(f"Current Provisional Income: **\\${prov_inc:,.0f}** | **Status:** {drag_desc}")
+    
+    gauge_max = max(prov_inc * 1.15, t2 + 20000.0)
+    
+    gauge_zones = pd.DataFrame([
+        {"Zone": "0% Taxable Zone", "Start": 0.0, "End": t1, "Color": "#2a9d8f", "Label": f"0% Taxable (Up to ${t1:,.0f})"},
+        {"Zone": "50% Phase-In", "Start": t1, "End": t2, "Color": "#e9c46a", "Label": f"50% Phase-In (${t1:,.0f} - ${t2:,.0f})"},
+        {"Zone": "85% Phase-In", "Start": t2, "End": gauge_max, "Color": "#f4a261", "Label": f"85% Phase-In (${t2:,.0f}+)"}
+    ])
+    
+    gauge_zones["Middle"] = (gauge_zones["Start"] + gauge_zones["End"]) / 2.0
+    
+    gauge_x_scale = alt.Scale(domain=[0, gauge_max], clamp=True)
+    
+    zone_bars = alt.Chart(gauge_zones).mark_bar(size=22, cornerRadius=2, opacity=0.85).encode(
+        x=alt.X("Start:Q", scale=gauge_x_scale, title="Provisional Income Scale ($)", axis=alt.Axis(format="$s", labelFontSize=12, titleFontSize=13)),
+        x2=alt.X2("End:Q"),
+        color=alt.Color("Color:N", scale=None),
+        tooltip=[
+            alt.Tooltip("Zone:N", title="Phase-In Tier"),
+            alt.Tooltip("Start:Q", title="Start", format="$,.0f"),
+            alt.Tooltip("End:Q", title="End", format="$,.0f")
+        ]
+    )
+    
+    zone_labels = alt.Chart(gauge_zones).mark_text(align="center", baseline="middle", color="black", fontSize=11, fontWeight="bold").encode(
+        x=alt.X("Middle:Q", scale=gauge_x_scale),
+        text=alt.Text("Label:N")
+    )
+    
+    user_indicator = alt.Chart(pd.DataFrame([{"Value": prov_inc}])).mark_rule(color="#1d3557", strokeWidth=3).encode(
+        x=alt.X("Value:Q", scale=gauge_x_scale),
+        tooltip=[alt.Tooltip("Value:Q", title="Current Provisional Income", format="$,.0f")]
+    )
+    
+    user_label = alt.Chart(pd.DataFrame([{"Value": prov_inc, "Text": f"▲ You: ${prov_inc:,.0f}"}])).mark_text(
+        align="center",
+        baseline="top",
+        dy=14,
+        fontSize=12,
+        fontWeight="bold",
+        color="#1d3557"
+    ).encode(
+        x=alt.X("Value:Q", scale=gauge_x_scale),
+        text=alt.Text("Text:N")
+    )
+    
+    st.altair_chart((zone_bars + zone_labels + user_indicator + user_label).properties(height=70), use_container_width=True)
 
 st.divider()
 
