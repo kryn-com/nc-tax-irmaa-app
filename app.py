@@ -276,6 +276,7 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
         "fed_agi": fed_agi,
         "magi": magi,
         "taxable_ss": taxable_ss,
+        "senior_bonus": senior_bonus,
         "total_fed_deduction": total_fed_deduction,
         "fed_ord_taxable": fed_ord_taxable,
         "fed_ltcg_taxable": fed_ltcg_taxable,
@@ -448,10 +449,13 @@ kpi4.metric(f"Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge", f"
 st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
 # Secondary Base Variables Row
-sub1, sub2, sub3 = st.columns(3)
+sub1, sub2, sub3, sub4 = st.columns(4)
 sub1.metric("Federal Adjusted Gross Income (AGI)", f"${base['fed_agi']:,.0f}")
 sub2.metric("Federal Taxable Income", f"${base['total_fed_taxable_income']:,.0f}")
-sub3.metric("Taxable Social Security", f"${base['taxable_ss']:,.0f}")
+
+ss_pct = round((base['taxable_ss'] / ss_in * 100.0)) if ss_in > 0 else 0
+sub3.metric("Taxable Social Security", f"${base['taxable_ss']:,.0f} ({ss_pct:.0f}%)")
+sub4.metric("Senior Bonus Deduction", f"${base['senior_bonus']:,.0f}")
 
 st.divider()
 
@@ -616,17 +620,34 @@ chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle",
     text=alt.Text("Label:N")
 )
 
-rules_data = [{"Name": "NIIT Threshold", "Value": p_selected["niit_threshold"]}]
+# Vertical threshold lines for NIIT & IRMAA
+rules_data = [{"Name": "NIIT", "Value": p_selected["niit_threshold"]}]
 for limit, _, name in p_selected["irmaa_tiers"]:
     if limit != float("inf"):
-        rules_data.append({"Name": f"Medicare {name.split()[1]}", "Value": limit})
+        rules_data.append({"Name": f"IRMAA {name.split()[1]}", "Value": limit})
 
-rule_chart = alt.Chart(pd.DataFrame(rules_data)).mark_rule(strokeDash=[4, 4], color="#e63946", strokeWidth=1.5).encode(
+df_rules = pd.DataFrame(rules_data)
+
+rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], color="#e63946", strokeWidth=1.5).encode(
     x=alt.X("Value:Q", scale=x_scale),
     tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="MAGI", format="$,.0f")]
 )
 
-st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart).properties(height=240), use_container_width=True)
+# Labels positioned directly above the top of the chart aligned with each dashed threshold
+rule_text = alt.Chart(df_rules).mark_text(
+    align="center",
+    baseline="bottom",
+    dy=-8,
+    fontSize=12,
+    fontWeight="bold",
+    color="#e63946"
+).encode(
+    x=alt.X("Value:Q", scale=x_scale),
+    y=alt.value(0),
+    text=alt.Text("Name:N")
+)
+
+st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart + rule_text).properties(height=250), use_container_width=True)
 
 st.divider()
 
