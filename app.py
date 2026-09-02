@@ -307,9 +307,9 @@ def format_breakdown(base_res, new_res):
     dss = new_res["taxable_ss"] - base_res["taxable_ss"]
     
     def fmt(val):
-        if val > 0: return f"+${val:,.0f}"
-        elif val < 0: return f"-${abs(val):,.0f}"
-        return f"${0}"
+        if val > 0: return f"+\\${val:,.0f}"
+        elif val < 0: return f"-\\${abs(val):,.0f}"
+        return "\\$0"
 
     parts = []
     if dfed != 0: parts.append(f"Fed: {fmt(dfed)}")
@@ -624,20 +624,20 @@ with alert1:
     if base["annual_irmaa"] == 0:
         st.success(
             f"**{base['tier_name']}**\n\n"
-            f"Current MAGI is **${base['magi']:,.0f}**. You are **${base['depth_irmaa']:,.0f}** deep into this tier, "
-            f"leaving **${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1."
+            f"Current MAGI is **\\${base['magi']:,.0f}**. You are **\\${base['depth_irmaa']:,.0f}** deep into this tier, "
+            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1."
         )
     elif base["headroom_irmaa"] is not None:
         st.warning(
             f"**{base['tier_name']}**\n\n"
-            f"Annual Surcharge is **${base['annual_irmaa']:,.0f}**. You are **${base['depth_irmaa']:,.0f}** past the previous cliff, "
-            f"leaving **${base['headroom_irmaa']:,.0f}** in headroom before the next penalty jump."
+            f"Annual Surcharge is **\\${base['annual_irmaa']:,.0f}**. You are **\\${base['depth_irmaa']:,.0f}** past the previous cliff, "
+            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before the next penalty jump."
         )
     else:
         st.error(
             f"**{base['tier_name']}**\n\n"
-            f"Maximum bracket. Annual Surcharge is **${base['annual_irmaa']:,.0f}**. "
-            f"You are **${base['depth_irmaa']:,.0f}** over the final cliff threshold."
+            f"Maximum bracket. Annual Surcharge is **\\${base['annual_irmaa']:,.0f}**. "
+            f"You are **\\${base['depth_irmaa']:,.0f}** over the final cliff threshold."
         )
 
 with alert2:
