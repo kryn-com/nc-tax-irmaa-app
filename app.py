@@ -36,10 +36,10 @@ PARAMS = {
             "ltcg_brackets": [(48350.0, 0.00), (533400.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
-                (111000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
-                (139000.0, 94.80, "Tier 2 Surcharge"),
-                (174000.0, 233.80, "Tier 3 Surcharge"),
-                (float("inf"), 374.50, "Tier 4 Surcharge (Maximum)")
+                (111000.0, 0.0, "Tier 0 (Standard - No Surcharge)"),
+                (139000.0, 94.80, "Tier 1 Surcharge"),
+                (174000.0, 233.80, "Tier 2 Surcharge"),
+                (float("inf"), 374.50, "Tier 3 Surcharge (Maximum)")
             ]
         },
         "MFJ": {
@@ -62,10 +62,10 @@ PARAMS = {
             "ltcg_brackets": [(96700.0, 0.00), (600050.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
-                (222000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
-                (278000.0, 94.80 * 2, "Tier 2 Surcharge"),
-                (348000.0, 233.80 * 2, "Tier 3 Surcharge"),
-                (float("inf"), 374.50 * 2, "Tier 4 Surcharge (Maximum)")
+                (222000.0, 0.0, "Tier 0 (Standard - No Surcharge)"),
+                (278000.0, 94.80 * 2, "Tier 1 Surcharge"),
+                (348000.0, 233.80 * 2, "Tier 2 Surcharge"),
+                (float("inf"), 374.50 * 2, "Tier 3 Surcharge (Maximum)")
             ]
         }
     },
@@ -84,10 +84,10 @@ PARAMS = {
             "ltcg_brackets": [(49450.0, 0.00), (545500.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
-                (114000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
-                (143000.0, 97.50, "Tier 2 Surcharge"),
-                (179000.0, 240.40, "Tier 3 Surcharge"),
-                (float("inf"), 385.00, "Tier 4 Surcharge (Maximum)")
+                (114000.0, 0.0, "Tier 0 (Standard - No Surcharge)"),
+                (143000.0, 97.50, "Tier 1 Surcharge"),
+                (179000.0, 240.40, "Tier 2 Surcharge"),
+                (float("inf"), 385.00, "Tier 3 Surcharge (Maximum)")
             ]
         },
         "MFJ": {
@@ -102,10 +102,10 @@ PARAMS = {
             "ltcg_brackets": [(98900.0, 0.00), (613600.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
-                (228000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
-                (286000.0, 97.50 * 2, "Tier 2 Surcharge"),
-                (358000.0, 240.40 * 2, "Tier 3 Surcharge"),
-                (float("inf"), 385.00 * 2, "Tier 4 Surcharge (Maximum)")
+                (228000.0, 0.0, "Tier 0 (Standard - No Surcharge)"),
+                (286000.0, 97.50 * 2, "Tier 1 Surcharge"),
+                (358000.0, 240.40 * 2, "Tier 2 Surcharge"),
+                (float("inf"), 385.00 * 2, "Tier 3 Surcharge (Maximum)")
             ]
         }
     },
@@ -124,10 +124,10 @@ PARAMS = {
             "ltcg_brackets": [(50850.0, 0.00), (560750.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
-                (117200.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
-                (147000.0, 100.20, "Tier 2 Surcharge"),
-                (184000.0, 247.10, "Tier 3 Surcharge"),
-                (float("inf"), 395.70, "Tier 4 Surcharge (Maximum)")
+                (117200.0, 0.0, "Tier 0 (Standard - No Surcharge)"),
+                (147000.0, 100.20, "Tier 1 Surcharge"),
+                (184000.0, 247.10, "Tier 2 Surcharge"),
+                (float("inf"), 395.70, "Tier 3 Surcharge (Maximum)")
             ]
         },
         "MFJ": {
@@ -142,10 +142,10 @@ PARAMS = {
             "ltcg_brackets": [(101650.0, 0.00), (630750.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
-                (234400.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
-                (294000.0, 100.20 * 2, "Tier 2 Surcharge"),
-                (368000.0, 247.10 * 2, "Tier 3 Surcharge"),
-                (float("inf"), 395.70 * 2, "Tier 4 Surcharge (Maximum)")
+                (234400.0, 0.0, "Tier 0 (Standard - No Surcharge)"),
+                (294000.0, 100.20 * 2, "Tier 1 Surcharge"),
+                (368000.0, 247.10 * 2, "Tier 2 Surcharge"),
+                (float("inf"), 395.70 * 2, "Tier 3 Surcharge (Maximum)")
             ]
         }
     }
@@ -460,10 +460,10 @@ sub4.metric("Senior Bonus Deduction", f"${base['senior_bonus']:,.0f}")
 st.divider()
 
 # ---------------------------------------------------------
-# 3-ROW MAGI STACKING CHART
+# 4-ROW MAGI STACKING CHART (With Social Security Line)
 # ---------------------------------------------------------
 st.subheader("Income Stacking & Vulnerability Cliffs")
-st.caption("Visualizes dollar placement across absolute MAGI boundaries. Outlined segments represent remaining capacity in your current marginal bracket.")
+st.caption("Visualizes dollar placement across absolute MAGI boundaries. Outlined segments represent remaining capacity or sheltered amounts.")
 
 blocks = []
 
@@ -471,7 +471,7 @@ blocks = []
 used_ded = min(base["fed_agi"], base["total_fed_deduction"])
 if used_ded > 0:
     blocks.append({
-        "Row": "Deductions",
+        "Row": "1. Deductions",
         "Start": 0.0,
         "End": used_ded,
         "Category": "Deductions (0%)",
@@ -479,7 +479,30 @@ if used_ded > 0:
         "Label": "0%"
     })
 
-# Row 2: Ordinary Income
+# Row 2: Social Security (Taxable vs. Excluded Breakdown)
+if ss_in > 0:
+    if base["taxable_ss"] > 0:
+        blocks.append({
+            "Row": "2. Social Security",
+            "Start": 0.0,
+            "End": base["taxable_ss"],
+            "Category": "Taxable SS",
+            "Type": "Actual",
+            "Label": f"Taxable ({ss_pct}%)"
+        })
+    
+    excluded_ss = ss_in - base["taxable_ss"]
+    if excluded_ss > 0:
+        blocks.append({
+            "Row": "2. Social Security",
+            "Start": base["taxable_ss"],
+            "End": ss_in,
+            "Category": "Excluded SS",
+            "Type": "Phantom",
+            "Label": f"Tax-Free ({100 - ss_pct}%)"
+        })
+
+# Row 3: Ordinary Income (Starts where Deductions end)
 curr_ord_x = used_ded
 prev_limit = 0.0
 for limit, rate in p_selected["ord_brackets"]:
@@ -487,7 +510,7 @@ for limit, rate in p_selected["ord_brackets"]:
         chunk = min(base["fed_ord_taxable"], limit) - prev_limit
         cat_name = f"Ord {int(rate*100)}%"
         blocks.append({
-            "Row": "Ordinary",
+            "Row": "3. Ordinary",
             "Start": curr_ord_x,
             "End": curr_ord_x + chunk,
             "Category": cat_name,
@@ -499,7 +522,7 @@ for limit, rate in p_selected["ord_brackets"]:
         if base["fed_ord_taxable"] < limit and limit != float("inf"):
             phantom_amt = limit - base["fed_ord_taxable"]
             blocks.append({
-                "Row": "Ordinary",
+                "Row": "3. Ordinary",
                 "Start": curr_ord_x,
                 "End": curr_ord_x + phantom_amt,
                 "Category": cat_name,
@@ -511,7 +534,7 @@ for limit, rate in p_selected["ord_brackets"]:
         break
     prev_limit = limit
 
-# Row 3: LTCG
+# Row 4: LTCG (Stacks on top of Ordinary Income)
 curr_ltcg_x = used_ded + base["fed_ord_taxable"]
 total_taxable = base["fed_ord_taxable"] + base["fed_ltcg_taxable"]
 prev_limit = 0.0
@@ -527,7 +550,7 @@ for limit, rate in p_selected["ltcg_brackets"]:
     if total_taxable > start_in_bracket:
         chunk = min(total_taxable, limit) - start_in_bracket
         blocks.append({
-            "Row": "LTCG",
+            "Row": "4. LTCG",
             "Start": curr_ltcg_x,
             "End": curr_ltcg_x + chunk,
             "Category": cat_name,
@@ -539,7 +562,7 @@ for limit, rate in p_selected["ltcg_brackets"]:
         if total_taxable < limit and limit != float("inf"):
             phantom_amt = limit - total_taxable
             blocks.append({
-                "Row": "LTCG",
+                "Row": "4. LTCG",
                 "Start": curr_ltcg_x,
                 "End": curr_ltcg_x + phantom_amt,
                 "Category": cat_name,
@@ -551,7 +574,7 @@ for limit, rate in p_selected["ltcg_brackets"]:
         if limit != float("inf"):
             phantom_amt = limit - start_in_bracket
             blocks.append({
-                "Row": "LTCG",
+                "Row": "4. LTCG",
                 "Start": curr_ltcg_x,
                 "End": curr_ltcg_x + phantom_amt,
                 "Category": cat_name,
@@ -579,18 +602,18 @@ if not next_cliff:
 x_axis_max = max(base["magi"] * 1.05, next_cliff + 15000)
 
 x_scale = alt.Scale(domain=[0, x_axis_max], clamp=True)
-y_scale = alt.Scale(domain=["Deductions", "Ordinary", "LTCG"])
+y_scale = alt.Scale(domain=["1. Deductions", "2. Social Security", "3. Ordinary", "4. LTCG"])
 
 df_actual = df_blocks[df_blocks["Type"] == "Actual"] if not df_blocks.empty else pd.DataFrame()
 df_phantom = df_blocks[df_blocks["Type"] == "Phantom"] if not df_blocks.empty else pd.DataFrame()
 df_labels = df_blocks[df_blocks["Width"] >= 4000] if not df_blocks.empty else pd.DataFrame()
 
-chart_actual = alt.Chart(df_actual).mark_bar(size=30, cornerRadius=2).encode(
+chart_actual = alt.Chart(df_actual).mark_bar(size=26, cornerRadius=2).encode(
     x=alt.X("Start:Q", scale=x_scale, title="Modified Adjusted Gross Income (MAGI)", 
             axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=15, grid=True)),
     x2=alt.X2("End:Q"),
     y=alt.Y("Row:N", scale=y_scale, title="", 
-            axis=alt.Axis(labels=True, ticks=False, labelPadding=10, labelFontSize=15, labelFontWeight="bold")),
+            axis=alt.Axis(labels=True, ticks=False, labelPadding=10, labelFontSize=14, labelFontWeight="bold")),
     color=alt.Color("Category:N", scale=alt.Scale(scheme="tableau10"), legend=None),
     tooltip=[
         alt.Tooltip("Category:N", title="Tax Tier"),
@@ -600,32 +623,32 @@ chart_actual = alt.Chart(df_actual).mark_bar(size=30, cornerRadius=2).encode(
     ]
 )
 
-chart_phantom = alt.Chart(df_phantom).mark_bar(size=30, fillOpacity=0.12, strokeWidth=1.5, strokeDash=[4, 4]).encode(
+chart_phantom = alt.Chart(df_phantom).mark_bar(size=26, fillOpacity=0.12, strokeWidth=1.5, strokeDash=[4, 4]).encode(
     x=alt.X("Start:Q", scale=x_scale),
     x2=alt.X2("End:Q"),
     y=alt.Y("Row:N", scale=y_scale),
     color=alt.Color("Category:N", scale=alt.Scale(scheme="tableau10"), legend=None),
     stroke=alt.Color("Category:N", scale=alt.Scale(scheme="tableau10"), legend=None),
     tooltip=[
-        alt.Tooltip("Category:N", title="Available Capacity"),
+        alt.Tooltip("Category:N", title="Available Capacity / Sheltered"),
         alt.Tooltip("Start:Q", title="Current Position", format="$,.0f"),
         alt.Tooltip("End:Q", title="Bracket Cap", format="$,.0f"),
         alt.Tooltip("Width:Q", title="Remaining Room", format="$,.0f")
     ]
 )
 
-chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle", color="white", fontSize=13, fontWeight="bold").encode(
+chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle", color="white", fontSize=12, fontWeight="bold").encode(
     x=alt.X("Middle:Q", scale=x_scale),
     y=alt.Y("Row:N", scale=y_scale),
     text=alt.Text("Label:N")
 )
 
 # Threshold lines: NIIT (Purple) and IRMAA (Red)
-rules_data = [{"Name": "NIIT", "Value": p_selected["niit_threshold"], "Color": "#8338ec"}]
-tier_num = 2
+rules_data = [{"Name": "NIIT", "Value": p_selected["niit_threshold"], "Color": "#8338ec", "Type": "NIIT"}]
+tier_num = 1
 for limit, _, _ in p_selected["irmaa_tiers"]:
     if limit != float("inf"):
-        rules_data.append({"Name": f"IRMAA {tier_num}", "Value": limit, "Color": "#e63946"})
+        rules_data.append({"Name": f"IRMAA {tier_num}", "Value": limit, "Color": "#e63946", "Type": "IRMAA"})
         tier_num += 1
 
 df_rules = pd.DataFrame(rules_data)
@@ -636,20 +659,37 @@ rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], strokeWidth=1.5).e
     tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="MAGI", format="$,.0f")]
 )
 
-rule_text = alt.Chart(df_rules).mark_text(
+# Staggered header text labels to completely avoid collisions
+df_rules_irmaa = df_rules[df_rules["Type"] == "IRMAA"]
+df_rules_niit = df_rules[df_rules["Type"] == "NIIT"]
+
+rule_text_irmaa = alt.Chart(df_rules_irmaa).mark_text(
     align="center",
     baseline="bottom",
     dy=-8,
     fontSize=12,
-    fontWeight="bold"
+    fontWeight="bold",
+    color="#e63946"
 ).encode(
     x=alt.X("Value:Q", scale=x_scale),
     y=alt.value(0),
-    text=alt.Text("Name:N"),
-    color=alt.Color("Color:N", scale=None)
+    text=alt.Text("Name:N")
 )
 
-st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart + rule_text).properties(height=250), use_container_width=True)
+rule_text_niit = alt.Chart(df_rules_niit).mark_text(
+    align="center",
+    baseline="bottom",
+    dy=-24,
+    fontSize=12,
+    fontWeight="bold",
+    color="#8338ec"
+).encode(
+    x=alt.X("Value:Q", scale=x_scale),
+    y=alt.value(0),
+    text=alt.Text("Name:N")
+)
+
+st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart + rule_text_irmaa + rule_text_niit).properties(height=280), use_container_width=True)
 
 st.divider()
 
@@ -691,7 +731,7 @@ with alert1:
         st.success(
             f"**{base['tier_name']}**\n\n"
             f"Current MAGI is **\\${base['magi']:,.0f}**. You are **\\${base['depth_irmaa']:,.0f}** deep into this tier, "
-            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 2."
+            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1."
         )
     elif base["headroom_irmaa"] is not None:
         st.warning(
