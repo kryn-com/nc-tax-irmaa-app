@@ -198,7 +198,6 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     else:
         lookup_income = fed_ord_taxable
 
-    # Data for the visual chart (using exact actual placement)
     prev_limit = 0.0
     ord_bracket_amts = []
     for limit, rate in p["ord_brackets"]:
@@ -209,7 +208,6 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
         else:
             break
 
-    # Calculate actual tax dollar amount using the Tax Table lookup_income
     fed_ord_tax_raw = 0.0
     prev_limit = 0.0
     for limit, rate in p["ord_brackets"]:
@@ -220,10 +218,9 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
         else:
             break
             
-    # IRS specifies Tax Tables output whole dollar amounts
     fed_ord_tax = round(fed_ord_tax_raw) if fed_ord_taxable < 100000 else fed_ord_tax_raw
             
-    # 6. Federal LTCG Brackets (LTCG stacks using exact taxable income boundary)
+    # 6. Federal LTCG Brackets
     start_stack = fed_ord_taxable
     end_stack = fed_ord_taxable + fed_ltcg_taxable
     fed_ltcg_tax = 0.0
@@ -337,11 +334,43 @@ with col_sp:
     sp_65 = st.checkbox("SP 65+", value=False) if filing_status == "MFJ" else False
 
 st.sidebar.subheader("Income Sources")
-wages_in = st.sidebar.number_input("Ordinary Income / tIRA ($)", min_value=0, max_value=1000000, value=120000, step=1000)
-ltcg_in = st.sidebar.number_input("Long-Term Capital Gains ($)", min_value=0, max_value=1000000, value=20000, step=1000)
-ss_in = st.sidebar.number_input("Social Security Benefits ($)", min_value=0, max_value=150000, value=15000, step=500)
-pretax_in = st.sidebar.number_input("Pre-Tax Deductions (401k) ($)", min_value=0, max_value=150000, value=0, step=500)
-muni_in = st.sidebar.number_input("Tax-Exempt Muni Interest ($)", min_value=0, max_value=150000, value=0, step=1000)
+wages_in = st.sidebar.number_input(
+    "Ordinary Income ($)", 
+    min_value=0, 
+    max_value=1000000, 
+    value=120000, 
+    step=1000,
+    help="Include Wages, Taxable Interest, Non-Qualified Dividends, Taxable IRA/Pensions/Annuities and Additional Income"
+)
+ltcg_in = st.sidebar.number_input(
+    "Long-Term Capital Gains ($)", 
+    min_value=0, 
+    max_value=1000000, 
+    value=20000, 
+    step=1000,
+    help="Include Qualified Dividends and Capital Gains"
+)
+ss_in = st.sidebar.number_input(
+    "Social Security Benefits (Gross) ($)", 
+    min_value=0, 
+    max_value=150000, 
+    value=15000, 
+    step=500
+)
+pretax_in = st.sidebar.number_input(
+    "Pre-Tax Deductions (401k) ($)", 
+    min_value=0, 
+    max_value=150000, 
+    value=0, 
+    step=500
+)
+muni_in = st.sidebar.number_input(
+    "Tax-Exempt Muni Interest ($)", 
+    min_value=0, 
+    max_value=150000, 
+    value=0, 
+    step=1000
+)
 
 st.sidebar.subheader("Deductions & State Adjustments")
 p_selected = PARAMS[tax_year][filing_status]
@@ -357,21 +386,35 @@ fed_ded_mode = st.sidebar.radio("Federal Deduction", ["Standard", "Itemized"], h
 fed_ded_val = (
     fed_std_val
     if fed_ded_mode == "Standard"
-    else st.sidebar.number_input("Federal Itemized ($)", 0, 300000, int(fed_std_val), 1000)
+    else st.sidebar.number_input(
+        "Federal Itemized ($)", 
+        0, 
+        300000, 
+        int(fed_std_val), 
+        1000,
+        help="Include QBI deduction"
+    )
 )
 
 nc_ded_mode = st.sidebar.radio("NC State Deduction", ["Standard", "Itemized"], horizontal=True)
 nc_ded_val = (
     nc_std_val
     if nc_ded_mode == "Standard"
-    else st.sidebar.number_input("NC Itemized ($)", 0, 300000, int(nc_std_val), 1000)
+    else st.sidebar.number_input(
+        "NC Itemized ($)", 
+        0, 
+        300000, 
+        int(nc_std_val), 
+        1000,
+        help="Include Home Mortgage Interest and RE property taxes up to $20k plus any charitable contributions or excess medical expenses"
+    )
 )
 
 nc_adj_in = st.sidebar.number_input(
     "NC Income Adjustments (+/-) ($)",
     value=0,
     step=500,
-    help="Net adjustments for state taxation differences (e.g., subtract U.S. Treasury interest, add out-of-state munis)."
+    help="Net adjustments for state taxation differences (e.g., subtract U.S. Treasury interest, add out-of-state munis) and remove any Bailey exempt pensions. Social Security is automatically removed."
 )
 
 # ---------------------------------------------------------
