@@ -22,8 +22,8 @@ PARAMS = {
             "age_65_bump": 2000.0,
             "ss_thresh_1": 25000.0,
             "ss_thresh_2": 34000.0,
-            "oba_max": 5800.0,
-            "oba_phaseout_start": 73000.0,
+            "oba_max": 6000.0,
+            "oba_phaseout_start": 75000.0,
             "ord_brackets": [
                 (11925.0, 0.10), 
                 (48475.0, 0.12), 
@@ -48,8 +48,8 @@ PARAMS = {
             "age_65_bump": 1600.0,
             "ss_thresh_1": 32000.0,
             "ss_thresh_2": 44000.0,
-            "oba_max": 5800.0,
-            "oba_phaseout_start": 146000.0,
+            "oba_max": 6000.0,
+            "oba_phaseout_start": 150000.0,
             "ord_brackets": [
                 (23850.0, 0.10), 
                 (96950.0, 0.12), 
@@ -118,8 +118,8 @@ PARAMS = {
             "age_65_bump": 2100.0,
             "ss_thresh_1": 25000.0,
             "ss_thresh_2": 34000.0,
-            "oba_max": 6150.0,
-            "oba_phaseout_start": 77100.0,
+            "oba_max": 6000.0,
+            "oba_phaseout_start": 75000.0,
             "ord_brackets": [(12750.0, 0.10), (51800.0, 0.12), (108650.0, 0.22), (207400.0, 0.24), (263300.0, 0.32), (582200.0, 0.35), (float("inf"), 0.37)],
             "ltcg_brackets": [(50850.0, 0.00), (560750.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
@@ -136,8 +136,8 @@ PARAMS = {
             "age_65_bump": 1700.0,
             "ss_thresh_1": 32000.0,
             "ss_thresh_2": 44000.0,
-            "oba_max": 6150.0,
-            "oba_phaseout_start": 154200.0,
+            "oba_max": 6000.0,
+            "oba_phaseout_start": 150000.0,
             "ord_brackets": [(25500.0, 0.10), (103600.0, 0.12), (217300.0, 0.22), (414800.0, 0.24), (526600.0, 0.32), (753100.0, 0.35), (float("inf"), 0.37)],
             "ltcg_brackets": [(101650.0, 0.00), (630750.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
@@ -284,6 +284,7 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
         "fed_ltcg_taxable": fed_ltcg_taxable,
         "fed_ord_tax": fed_ord_tax,
         "fed_ltcg_tax": fed_ltcg_tax,
+        "total_fed_taxable_income": total_taxable_income,
         "niit_tax": niit_tax,
         "niit_subject": niit_subject,
         "nc_tax": nc_tax,
@@ -394,11 +395,20 @@ dn_ltcg_save = base["total_outflows"] - dn_ltcg["total_outflows"]
 header_year = f"{tax_year} (Projected)" if tax_year == 2027 else str(tax_year)
 st.title(f"{header_year} Year-End Tax & Medicare Cliff Planner ({filing_status})")
 
+# Primary Tax KPI Row
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Federal Income Tax", f"${base['fed_ord_tax'] + base['fed_ltcg_tax']:,.0f}")
 kpi2.metric(f"NC State Tax ({PARAMS[tax_year]['nc_tax_rate']*100:.2f}%)", f"${base['nc_tax']:,.0f}")
 kpi3.metric("Net Investment Income Tax", f"${base['niit_tax']:,.0f}")
 kpi4.metric(f"Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge", f"${base['annual_irmaa']:,.0f}/yr")
+
+st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+
+# Secondary Base Variables Row
+sub1, sub2, sub3 = st.columns(3)
+sub1.metric("Federal Adjusted Gross Income (AGI)", f"${base['fed_agi']:,.0f}")
+sub2.metric("Federal Taxable Income", f"${base['total_fed_taxable_income']:,.0f}")
+sub3.metric("Taxable Social Security", f"${base['taxable_ss']:,.0f}")
 
 st.divider()
 
