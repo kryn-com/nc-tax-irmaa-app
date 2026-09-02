@@ -36,10 +36,10 @@ PARAMS = {
             "ltcg_brackets": [(48350.0, 0.00), (533400.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
-                (111000.0, 0.0, "Tier 0 (Standard)"),
-                (139000.0, 94.80, "Tier 1 Surcharge"),
-                (174000.0, 233.80, "Tier 2 Surcharge"),
-                (float("inf"), 374.50, "Tier 3 Surcharge")
+                (111000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
+                (139000.0, 94.80, "Tier 2 Surcharge"),
+                (174000.0, 233.80, "Tier 3 Surcharge"),
+                (float("inf"), 374.50, "Tier 4 Surcharge (Maximum)")
             ]
         },
         "MFJ": {
@@ -62,10 +62,10 @@ PARAMS = {
             "ltcg_brackets": [(96700.0, 0.00), (600050.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
-                (222000.0, 0.0, "Tier 0 (Standard)"),
-                (278000.0, 94.80 * 2, "Tier 1 Surcharge (2x)"),
-                (348000.0, 233.80 * 2, "Tier 2 Surcharge (2x)"),
-                (float("inf"), 374.50 * 2, "Tier 3 Surcharge (2x)")
+                (222000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
+                (278000.0, 94.80 * 2, "Tier 2 Surcharge"),
+                (348000.0, 233.80 * 2, "Tier 3 Surcharge"),
+                (float("inf"), 374.50 * 2, "Tier 4 Surcharge (Maximum)")
             ]
         }
     },
@@ -84,10 +84,10 @@ PARAMS = {
             "ltcg_brackets": [(49450.0, 0.00), (545500.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
-                (114000.0, 0.0, "Tier 0 (Standard)"),
-                (143000.0, 97.50, "Tier 1 Surcharge"),
-                (179000.0, 240.40, "Tier 2 Surcharge"),
-                (float("inf"), 385.00, "Tier 3 Surcharge")
+                (114000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
+                (143000.0, 97.50, "Tier 2 Surcharge"),
+                (179000.0, 240.40, "Tier 3 Surcharge"),
+                (float("inf"), 385.00, "Tier 4 Surcharge (Maximum)")
             ]
         },
         "MFJ": {
@@ -102,10 +102,10 @@ PARAMS = {
             "ltcg_brackets": [(98900.0, 0.00), (613600.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
-                (228000.0, 0.0, "Tier 0 (Standard)"),
-                (286000.0, 97.50 * 2, "Tier 1 Surcharge (2x)"),
-                (358000.0, 240.40 * 2, "Tier 2 Surcharge (2x)"),
-                (float("inf"), 385.00 * 2, "Tier 3 Surcharge (2x)")
+                (228000.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
+                (286000.0, 97.50 * 2, "Tier 2 Surcharge"),
+                (358000.0, 240.40 * 2, "Tier 3 Surcharge"),
+                (float("inf"), 385.00 * 2, "Tier 4 Surcharge (Maximum)")
             ]
         }
     },
@@ -124,10 +124,10 @@ PARAMS = {
             "ltcg_brackets": [(50850.0, 0.00), (560750.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
-                (117200.0, 0.0, "Tier 0 (Standard)"),
-                (147000.0, 100.20, "Tier 1 Surcharge"),
-                (184000.0, 247.10, "Tier 2 Surcharge"),
-                (float("inf"), 395.70, "Tier 3 Surcharge")
+                (117200.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
+                (147000.0, 100.20, "Tier 2 Surcharge"),
+                (184000.0, 247.10, "Tier 3 Surcharge"),
+                (float("inf"), 395.70, "Tier 4 Surcharge (Maximum)")
             ]
         },
         "MFJ": {
@@ -142,10 +142,10 @@ PARAMS = {
             "ltcg_brackets": [(101650.0, 0.00), (630750.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
-                (234400.0, 0.0, "Tier 0 (Standard)"),
-                (294000.0, 100.20 * 2, "Tier 1 Surcharge (2x)"),
-                (368000.0, 247.10 * 2, "Tier 2 Surcharge (2x)"),
-                (float("inf"), 395.70 * 2, "Tier 3 Surcharge (2x)")
+                (234400.0, 0.0, "Tier 1 (Standard - No Surcharge)"),
+                (294000.0, 100.20 * 2, "Tier 2 Surcharge"),
+                (368000.0, 247.10 * 2, "Tier 3 Surcharge"),
+                (float("inf"), 395.70 * 2, "Tier 4 Surcharge (Maximum)")
             ]
         }
     }
@@ -444,7 +444,7 @@ kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Federal Income Tax", f"${base['fed_ord_tax'] + base['fed_ltcg_tax']:,.0f}")
 kpi2.metric(f"NC State Tax ({PARAMS[tax_year]['nc_tax_rate']*100:.2f}%)", f"${base['nc_tax']:,.0f}")
 kpi3.metric("Net Investment Income Tax", f"${base['niit_tax']:,.0f}")
-kpi4.metric(f"Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge", f"${base['annual_irmaa']:,.0f}/yr")
+kpi4.metric(f"Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge (Parts B + D)", f"${base['annual_irmaa']:,.0f}/yr")
 
 st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
@@ -620,31 +620,33 @@ chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle",
     text=alt.Text("Label:N")
 )
 
-# Vertical threshold lines for NIIT & IRMAA
-rules_data = [{"Name": "NIIT", "Value": p_selected["niit_threshold"]}]
-for limit, _, name in p_selected["irmaa_tiers"]:
+# Threshold lines: NIIT (Purple) and IRMAA (Red)
+rules_data = [{"Name": "NIIT", "Value": p_selected["niit_threshold"], "Color": "#8338ec"}]
+tier_num = 2
+for limit, _, _ in p_selected["irmaa_tiers"]:
     if limit != float("inf"):
-        rules_data.append({"Name": f"IRMAA {name.split()[1]}", "Value": limit})
+        rules_data.append({"Name": f"IRMAA {tier_num}", "Value": limit, "Color": "#e63946"})
+        tier_num += 1
 
 df_rules = pd.DataFrame(rules_data)
 
-rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], color="#e63946", strokeWidth=1.5).encode(
+rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], strokeWidth=1.5).encode(
     x=alt.X("Value:Q", scale=x_scale),
+    color=alt.Color("Color:N", scale=None),
     tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="MAGI", format="$,.0f")]
 )
 
-# Labels positioned directly above the top of the chart aligned with each dashed threshold
 rule_text = alt.Chart(df_rules).mark_text(
     align="center",
     baseline="bottom",
     dy=-8,
     fontSize=12,
-    fontWeight="bold",
-    color="#e63946"
+    fontWeight="bold"
 ).encode(
     x=alt.X("Value:Q", scale=x_scale),
     y=alt.value(0),
-    text=alt.Text("Name:N")
+    text=alt.Text("Name:N"),
+    color=alt.Color("Color:N", scale=None)
 )
 
 st.altair_chart((chart_actual + chart_phantom + chart_labels + rule_chart + rule_text).properties(height=250), use_container_width=True)
@@ -684,12 +686,12 @@ st.divider()
 # ---------------------------------------------------------
 alert1, alert2 = st.columns(2)
 with alert1:
-    st.markdown(f"### Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge")
+    st.markdown(f"### Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge (Parts B + D)")
     if base["annual_irmaa"] == 0:
         st.success(
             f"**{base['tier_name']}**\n\n"
             f"Current MAGI is **\\${base['magi']:,.0f}**. You are **\\${base['depth_irmaa']:,.0f}** deep into this tier, "
-            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1."
+            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 2."
         )
     elif base["headroom_irmaa"] is not None:
         st.warning(
