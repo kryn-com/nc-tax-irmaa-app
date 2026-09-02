@@ -168,16 +168,17 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     else:
         taxable_ss = min(0.85 * ss, (0.50 * min(ss, t2 - t1)) + 0.85 * (prov_income - t2))
     
-    # 2. AGI & MAGI
+    # 2. AGI & Specific MAGI Bases
     fed_agi = max(0.0, wages + ltcg + taxable_ss - pretax)
-    magi = max(0.0, fed_agi + muni)
+    irmaa_magi = max(0.0, fed_agi + muni)
+    niit_magi = fed_agi
     
     # 3. OBA Senior Bonus Deduction
     senior_bonus = 0.0
     if tp_65 or sp_65:
         count = sum([tp_65, sp_65]) if status == "MFJ" else (1 if tp_65 else 0)
         max_ded = p["oba_max"] * count
-        phase_out = max(0.0, (magi - p["oba_phaseout_start"]) * 0.06)
+        phase_out = max(0.0, (irmaa_magi - p["oba_phaseout_start"]) * 0.06)
         senior_bonus = max(0.0, max_ded - phase_out)
         
     total_fed_deduction = fed_ded_base + senior_bonus
@@ -240,11 +241,11 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     
     fed_ltcg_tax = (t_0 * ltcg_b[0][1]) + (t_15 * ltcg_b[1][1]) + (t_20 * ltcg_b[2][1])
     
-    # 7. Net Investment Income Tax
+    # 7. Net Investment Income Tax (Based on niit_magi)
     niit_tax = 0.0
     niit_subject = 0.0
-    if magi > p["niit_threshold"] and ltcg > 0:
-        niit_subject = min(float(ltcg), magi - p["niit_threshold"])
+    if niit_magi > p["niit_threshold"] and ltcg > 0:
+        niit_subject = min(float(ltcg), niit_magi - p["niit_threshold"])
         niit_tax = niit_subject * 0.038
         
     total_fed_tax = fed_ord_tax + fed_ltcg_tax + niit_tax
@@ -253,7 +254,7 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     nc_taxable = max(0.0, wages + ltcg - pretax - nc_ded_base + nc_adj)
     nc_tax = nc_taxable * nc_rate
     
-    # 9. Projected Medicare Surcharge
+    # 9. Projected Medicare Surcharge (Based on irmaa_magi)
     tier_name = ""
     monthly_irmaa = 0.0
     headroom_irmaa = None
@@ -261,11 +262,11 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     previous_limit = 0.0
     
     for limit, surcharge, name in p["irmaa_tiers"]:
-        if magi <= limit:
+        if irmaa_magi <= limit:
             tier_name = name
             monthly_irmaa = surcharge
-            headroom_irmaa = limit - magi if limit != float("inf") else None
-            depth_irmaa = magi - previous_limit
+            headroom_irmaa = limit - irmaa_magi if limit != float("inf") else None
+            depth_irmaa = irmaa_magi - previous_limit
             break
         previous_limit = limit
             
@@ -274,8 +275,8 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     
     return {
         "fed_agi": fed_agi,
-        "magi": magi,
-        "prov_income": prov_income,
+        "irmaa_magi": irmaa_magi,
+        "niit_magi": niit_magi,
         "taxable_ss": taxable_ss,
         "senior_bonus": senior_bonus,
         "total_fed_deduction": total_fed_deduction,
@@ -461,10 +462,10 @@ sub4.metric("Senior Bonus Deduction", f"${base['senior_bonus']:,.0f}")
 st.divider()
 
 # ---------------------------------------------------------
-# 1. 3-ROW MAGI STACKING CHART
+# 3-ROW AGI STACKING CHART WITH SHIFTED IRMAA CLIFFS
 # ---------------------------------------------------------
 st.subheader("Income Stacking & Vulnerability Cliffs")
-st.caption("Visualizes dollar placement across absolute MAGI boundaries. Outlined segments represent remaining capacity in your current marginal bracket.")
+st.caption("Visualizes dollar placement across Federal AGI boundaries. Outlined segments represent remaining capacity in your current marginal bracket.")
 
 blocks = []
 
@@ -570,14 +571,15 @@ if not df_blocks.empty:
 # Determine dynamic X-axis bounds
 next_cliff = None
 for limit, _, _ in p_selected["irmaa_tiers"]:
-    if limit > base["magi"] and limit != float("inf"):
-        next_cliff = limit
+    eff_limit = max(0.0, limit - muni_in)
+    if eff_limit > base["fed_agi"] and limit != float("inf"):
+        next_cliff = eff_limit
         break
 
 if not next_cliff:
-    next_cliff = base["magi"] * 1.05
+    next_cliff = base["fed_agi"] * 1.05
     
-x_axis_max = max(base["magi"] * 1.05, next_cliff + 15000)
+x_axis_max = max(base["fed_agi"] * 1.05, next_cliff + 15000)
 
 x_scale = alt.Scale(domain=[0, x_axis_max], clamp=True)
 y_scale = alt.Scale(domain=["Deductions", "Ordinary", "LTCG"])
@@ -587,7 +589,7 @@ df_phantom = df_blocks[df_blocks["Type"] == "Phantom"] if not df_blocks.empty el
 df_labels = df_blocks[df_blocks["Width"] >= 4000] if not df_blocks.empty else pd.DataFrame()
 
 chart_actual = alt.Chart(df_actual).mark_bar(size=28, cornerRadius=2).encode(
-    x=alt.X("Start:Q", scale=x_scale, title="Modified Adjusted Gross Income (MAGI)", 
+    x=alt.X("Start:Q", scale=x_scale, title="Federal Adjusted Gross Income (AGI)", 
             axis=alt.Axis(format="$s", labelFontSize=14, titleFontSize=15, grid=True)),
     x2=alt.X2("End:Q"),
     y=alt.Y("Row:N", scale=y_scale, title="", 
@@ -595,8 +597,8 @@ chart_actual = alt.Chart(df_actual).mark_bar(size=28, cornerRadius=2).encode(
     color=alt.Color("Category:N", scale=alt.Scale(scheme="tableau10"), legend=None),
     tooltip=[
         alt.Tooltip("Category:N", title="Tax Tier"),
-        alt.Tooltip("Start:Q", title="Start MAGI", format="$,.0f"),
-        alt.Tooltip("End:Q", title="End MAGI", format="$,.0f"),
+        alt.Tooltip("Start:Q", title="Start AGI", format="$,.0f"),
+        alt.Tooltip("End:Q", title="End AGI", format="$,.0f"),
         alt.Tooltip("Width:Q", title="Span", format="$,.0f")
     ]
 )
@@ -621,12 +623,15 @@ chart_labels = alt.Chart(df_labels).mark_text(align="center", baseline="middle",
     text=alt.Text("Label:N")
 )
 
-# Threshold rules: IRMAA (Red) and NIIT (Purple)
+# Threshold rules: IRMAA (Red, shifted by Muni) and NIIT (Purple, fixed at statutory)
 rules_data = []
 tier_num = 1
 for limit, _, _ in p_selected["irmaa_tiers"]:
-    if limit != float("inf") and limit <= x_axis_max:
-        rules_data.append({"Name": f"IRMAA {tier_num}", "Value": limit, "Color": "#e63946", "Type": "IRMAA"})
+    if limit != float("inf"):
+        eff_limit = max(0.0, limit - muni_in)
+        if eff_limit <= x_axis_max:
+            label_name = f"IRMAA {tier_num}*" if muni_in > 0 else f"IRMAA {tier_num}"
+            rules_data.append({"Name": label_name, "Value": eff_limit, "Color": "#e63946", "Type": "IRMAA"})
         tier_num += 1
 
 if p_selected["niit_threshold"] <= x_axis_max:
@@ -638,7 +643,7 @@ if not df_rules.empty:
     rule_chart = alt.Chart(df_rules).mark_rule(strokeDash=[4, 4], strokeWidth=1.5).encode(
         x=alt.X("Value:Q", scale=x_scale),
         color=alt.Color("Color:N", scale=None),
-        tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="MAGI", format="$,.0f")]
+        tooltip=[alt.Tooltip("Name:N", title="Cliff"), alt.Tooltip("Value:Q", title="Effective AGI Limit", format="$,.0f")]
     )
 
     df_rules_irmaa = df_rules[df_rules["Type"] == "IRMAA"]
@@ -674,74 +679,8 @@ if not df_rules.empty:
 else:
     st.altair_chart((chart_actual + chart_phantom + chart_labels).properties(height=240), use_container_width=True)
 
-# ---------------------------------------------------------
-# 2. SOCIAL SECURITY TORPEDO GAUGE (Option C)
-# ---------------------------------------------------------
-if ss_in > 0:
-    st.markdown("#### Social Security Taxability & Torpedo Phase-In")
-    
-    t1 = p_selected["ss_thresh_1"]
-    t2 = p_selected["ss_thresh_2"]
-    prov_inc = base["prov_income"]
-    
-    # Identify drag multiplier
-    if prov_inc <= t1:
-        drag_desc = "0% Drag (\\$0 taxable SS added per \\$1.00 income)"
-    elif prov_inc <= t2:
-        drag_desc = "50% Phase-In (+50¢ taxable SS added per \\$1.00 income)"
-    elif base["taxable_ss"] < (0.85 * ss_in):
-        drag_desc = "85% Phase-In (+85¢ taxable SS added per \\$1.00 income — Active Torpedo Zone)"
-    else:
-        drag_desc = "85% Cap Reached (\\$0 taxable SS added per \\$1.00 income)"
-        
-    st.caption(f"Current Provisional Income: **\\${prov_inc:,.0f}** | **Status:** {drag_desc}")
-    
-    gauge_max = max(prov_inc * 1.15, t2 + 20000.0)
-    
-    gauge_zones = pd.DataFrame([
-        {"Zone": "0% Taxable Zone", "Start": 0.0, "End": t1, "Color": "#2a9d8f", "Label": f"0% Taxable (Up to ${t1:,.0f})"},
-        {"Zone": "50% Phase-In", "Start": t1, "End": t2, "Color": "#e9c46a", "Label": f"50% Phase-In (${t1:,.0f} - ${t2:,.0f})"},
-        {"Zone": "85% Phase-In", "Start": t2, "End": gauge_max, "Color": "#f4a261", "Label": f"85% Phase-In (${t2:,.0f}+)"}
-    ])
-    
-    gauge_zones["Middle"] = (gauge_zones["Start"] + gauge_zones["End"]) / 2.0
-    
-    gauge_x_scale = alt.Scale(domain=[0, gauge_max], clamp=True)
-    
-    zone_bars = alt.Chart(gauge_zones).mark_bar(size=22, cornerRadius=2, opacity=0.85).encode(
-        x=alt.X("Start:Q", scale=gauge_x_scale, title="Provisional Income Scale ($)", axis=alt.Axis(format="$s", labelFontSize=12, titleFontSize=13)),
-        x2=alt.X2("End:Q"),
-        color=alt.Color("Color:N", scale=None),
-        tooltip=[
-            alt.Tooltip("Zone:N", title="Phase-In Tier"),
-            alt.Tooltip("Start:Q", title="Start", format="$,.0f"),
-            alt.Tooltip("End:Q", title="End", format="$,.0f")
-        ]
-    )
-    
-    zone_labels = alt.Chart(gauge_zones).mark_text(align="center", baseline="middle", color="black", fontSize=11, fontWeight="bold").encode(
-        x=alt.X("Middle:Q", scale=gauge_x_scale),
-        text=alt.Text("Label:N")
-    )
-    
-    user_indicator = alt.Chart(pd.DataFrame([{"Value": prov_inc}])).mark_rule(color="#1d3557", strokeWidth=3).encode(
-        x=alt.X("Value:Q", scale=gauge_x_scale),
-        tooltip=[alt.Tooltip("Value:Q", title="Current Provisional Income", format="$,.0f")]
-    )
-    
-    user_label = alt.Chart(pd.DataFrame([{"Value": prov_inc, "Text": f"▲ You: ${prov_inc:,.0f}"}])).mark_text(
-        align="center",
-        baseline="top",
-        dy=14,
-        fontSize=12,
-        fontWeight="bold",
-        color="#1d3557"
-    ).encode(
-        x=alt.X("Value:Q", scale=gauge_x_scale),
-        text=alt.Text("Text:N")
-    )
-    
-    st.altair_chart((zone_bars + zone_labels + user_indicator + user_label).properties(height=70), use_container_width=True)
+if muni_in > 0:
+    st.caption(f"*\\*Note: Threshold lines are adjusted for tax-exempt muni interest (\\${muni_in:,.0f}) which impacts IRMAA.*")
 
 st.divider()
 
@@ -774,46 +713,35 @@ with col_ltcg_sub:
 st.divider()
 
 # ---------------------------------------------------------
-# STATUS BOXES
+# STATUS BOXES (2-Line Separated Layout)
 # ---------------------------------------------------------
 alert1, alert2 = st.columns(2)
 with alert1:
     st.markdown(f"### Projected {PARAMS[tax_year]['irmaa_year']} Medicare Surcharge (Parts B + D)")
+    muni_str = f" (\\${base['fed_agi']:,.0f} AGI + \\${muni_in:,.0f} Muni Interest)" if muni_in > 0 else ""
+    line1 = f"Current IRMAA MAGI is **\\${base['irmaa_magi']:,.0f}**{muni_str}."
+    
     if base["annual_irmaa"] == 0:
-        st.success(
-            f"**{base['tier_name']}**\n\n"
-            f"Current MAGI is **\\${base['magi']:,.0f}**. You are **\\${base['depth_irmaa']:,.0f}** deep into this tier, "
-            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1."
-        )
+        line2 = f"**{base['tier_name']}**: You are \\${base['depth_irmaa']:,.0f} deep into this tier, leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before hitting Tier 1."
+        st.success(f"{line1}\n\n{line2}")
     elif base["headroom_irmaa"] is not None:
-        st.warning(
-            f"**{base['tier_name']}**\n\n"
-            f"Annual Surcharge is **\\${base['annual_irmaa']:,.0f}**. You are **\\${base['depth_irmaa']:,.0f}** past the previous cliff, "
-            f"leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before the next penalty jump."
-        )
+        line2 = f"**{base['tier_name']}** (Annual Surcharge: \\${base['annual_irmaa']:,.0f}): You are \\${base['depth_irmaa']:,.0f} past the previous cliff, leaving **\\${base['headroom_irmaa']:,.0f}** in headroom before the next penalty jump."
+        st.warning(f"{line1}\n\n{line2}")
     else:
-        st.error(
-            f"**{base['tier_name']}**\n\n"
-            f"Maximum bracket. Annual Surcharge is **\\${base['annual_irmaa']:,.0f}**. "
-            f"You are **\\${base['depth_irmaa']:,.0f}** over the final cliff threshold."
-        )
+        line2 = f"**{base['tier_name']}** (Annual Surcharge: \\${base['annual_irmaa']:,.0f}): You are \\${base['depth_irmaa']:,.0f} over the final cliff threshold."
+        st.error(f"{line1}\n\n{line2}")
 
 with alert2:
     st.markdown("### Net Investment Income Tax")
     nl = p_selected["niit_threshold"]
-    if base["magi"] > nl and ltcg_in > 0:
-        st.warning(
-            f"**NIIT Active (3.8%)**\n\n"
-            f"MAGI of **\\${base['magi']:,.0f}** exceeds the **\\${nl:,.0f}** limit. "
-            f"**\\${base['niit_subject']:,.0f}** of investment income is penalized (**\\${base['niit_tax']:,.0f}** tax)."
-        )
-    elif base["magi"] > nl:
-        st.info(
-            f"**NIIT Clear**\n\n"
-            f"MAGI of **\\${base['magi']:,.0f}** exceeds the limit, but there is **\\$0** of investment income to penalize."
-        )
+    line1 = f"Current NIIT MAGI (Federal AGI) is **\\${base['niit_magi']:,.0f}**."
+    
+    if base["niit_magi"] > nl and ltcg_in > 0:
+        line2 = f"**NIIT Active (3.8%)**: Exceeds \\${nl:,.0f} threshold. **\\${base['niit_subject']:,.0f}** of investment income is penalized (**\\${base['niit_tax']:,.0f}** tax)."
+        st.warning(f"{line1}\n\n{line2}")
+    elif base["niit_magi"] > nl:
+        line2 = f"**NIIT Clear**: Exceeds \\${nl:,.0f} threshold, but there is **\\$0** of investment income to penalize."
+        st.info(f"{line1}\n\n{line2}")
     else:
-        st.success(
-            f"**NIIT Exempt**\n\n"
-            f"MAGI is **\\${base['magi']:,.0f}**. You have **\\${(nl - base['magi']):,.0f}** in headroom before the penalty applies."
-        )
+        line2 = f"**NIIT Exempt**: You have **\\${(nl - base['niit_magi']):,.0f}** in headroom before the 3.8% penalty applies."
+        st.success(f"{line1}\n\n{line2}")
