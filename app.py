@@ -646,18 +646,18 @@ with alert2:
     if base["magi"] > nl and ltcg_in > 0:
         st.warning(
             f"**NIIT Active (3.8%)**\n\n"
-            f"MAGI of **${base['magi']:,.0f}** exceeds the **${nl:,.0f}** limit. "
-            f"**${base['niit_subject']:,.0f}** of investment income is penalized (**${base['niit_tax']:,.0f}** tax)."
+            f"MAGI of **\\${base['magi']:,.0f}** exceeds the **\\${nl:,.0f}** limit. "
+            f"**\\${base['niit_subject']:,.0f}** of investment income is penalized (**\\${base['niit_tax']:,.0f}** tax)."
         )
     elif base["magi"] > nl:
         st.info(
             f"**NIIT Clear**\n\n"
-            f"MAGI of **${base['magi']:,.0f}** exceeds the limit, but there is **$0** of investment income to penalize."
+            f"MAGI of **\\${base['magi']:,.0f}** exceeds the limit, but there is **\\$0** of investment income to penalize."
         )
     else:
         st.success(
             f"**NIIT Exempt**\n\n"
-            f"MAGI is **${base['magi']:,.0f}**. You have **${(nl - base['magi']):,.0f}** in headroom before the penalty applies."
+            f"MAGI is **\\${base['magi']:,.0f}**. You have **\\${(nl - base['magi']):,.0f}** in headroom before the penalty applies."
         )
 
 st.divider()
