@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import math
 
 st.set_page_config(
     page_title="Multi-Year Federal & NC Tax Planner",
@@ -23,8 +24,16 @@ PARAMS = {
             "ss_thresh_2": 34000.0,
             "oba_max": 5800.0,
             "oba_phaseout_start": 73000.0,
-            "ord_brackets": [(12050.0, 0.10), (49050.0, 0.12), (102800.0, 0.22), (196250.0, 0.24), (249150.0, 0.32), (550900.0, 0.35), (float("inf"), 0.37)],
-            "ltcg_brackets": [(48100.0, 0.00), (530650.0, 0.15), (float("inf"), 0.20)],
+            "ord_brackets": [
+                (11925.0, 0.10), 
+                (48475.0, 0.12), 
+                (103350.0, 0.22), 
+                (197300.0, 0.24), 
+                (250525.0, 0.32), 
+                (626350.0, 0.35), 
+                (float("inf"), 0.37)
+            ],
+            "ltcg_brackets": [(48350.0, 0.00), (533400.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 200000.0,
             "irmaa_tiers": [
                 (111000.0, 0.0, "Tier 0 (Standard)"),
@@ -41,8 +50,16 @@ PARAMS = {
             "ss_thresh_2": 44000.0,
             "oba_max": 5800.0,
             "oba_phaseout_start": 146000.0,
-            "ord_brackets": [(24100.0, 0.10), (98100.0, 0.12), (205600.0, 0.22), (392500.0, 0.24), (498300.0, 0.32), (712500.0, 0.35), (float("inf"), 0.37)],
-            "ltcg_brackets": [(96200.0, 0.00), (596900.0, 0.15), (float("inf"), 0.20)],
+            "ord_brackets": [
+                (23850.0, 0.10), 
+                (96950.0, 0.12), 
+                (206700.0, 0.22), 
+                (394600.0, 0.24), 
+                (501050.0, 0.32), 
+                (751600.0, 0.35), 
+                (float("inf"), 0.37)
+            ],
+            "ltcg_brackets": [(96700.0, 0.00), (600050.0, 0.15), (float("inf"), 0.20)],
             "niit_threshold": 250000.0,
             "irmaa_tiers": [
                 (222000.0, 0.0, "Tier 0 (Standard)"),
@@ -172,21 +189,41 @@ def calculate_tax_scenario(year, wages, ltcg, ss, pretax, muni, fed_ded_base, nc
     fed_ord_taxable = min(total_taxable_income, max(0.0, ordinary_gross - total_fed_deduction))
     fed_ltcg_taxable = total_taxable_income - fed_ord_taxable
     
-    # 5. Federal Ordinary Brackets
-    fed_ord_tax = 0.0
+    # 5. Federal Ordinary Brackets & Tax Table Logic (Midpoint for < $100k)
+    if 0 < fed_ord_taxable < 100000:
+        if fed_ord_taxable < 3000:
+            lookup_income = math.floor(fed_ord_taxable / 25.0) * 25.0 + 12.5
+        else:
+            lookup_income = math.floor(fed_ord_taxable / 50.0) * 50.0 + 25.0
+    else:
+        lookup_income = fed_ord_taxable
+
+    # Data for the visual chart (using exact actual placement)
     prev_limit = 0.0
     ord_bracket_amts = []
-    
     for limit, rate in p["ord_brackets"]:
         if fed_ord_taxable > prev_limit:
             chunk = min(fed_ord_taxable, limit) - prev_limit
-            fed_ord_tax += chunk * rate
             ord_bracket_amts.append({"rate": rate, "amount": chunk, "bracket_limit": limit})
             prev_limit = limit
         else:
             break
+
+    # Calculate actual tax dollar amount using the Tax Table lookup_income
+    fed_ord_tax_raw = 0.0
+    prev_limit = 0.0
+    for limit, rate in p["ord_brackets"]:
+        if lookup_income > prev_limit:
+            chunk = min(lookup_income, limit) - prev_limit
+            fed_ord_tax_raw += chunk * rate
+            prev_limit = limit
+        else:
+            break
             
-    # 6. Federal LTCG Brackets
+    # IRS specifies Tax Tables output whole dollar amounts
+    fed_ord_tax = round(fed_ord_tax_raw) if fed_ord_taxable < 100000 else fed_ord_tax_raw
+            
+    # 6. Federal LTCG Brackets (LTCG stacks using exact taxable income boundary)
     start_stack = fed_ord_taxable
     end_stack = fed_ord_taxable + fed_ltcg_taxable
     fed_ltcg_tax = 0.0
